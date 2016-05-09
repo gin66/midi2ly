@@ -2,6 +2,8 @@
 import sys
 import python_midi as midi
 
+notes = ['C','Cis/Des','D','Dis/Es','E','F','Fis/Ges','G','Gis/As','A','Ais/Bb','B']
+
 #                                               number of sharps +/flats -
 ref = {             # c   d   e f   g   a   h   | / major 0/minor 1 fla
         'c \\major': [1,0,1,0,1,1,0,1,0,1,0,1,  0,0],
@@ -53,4 +55,24 @@ def calculate(p):
                     sm = max(stats)
 
     return(key_ticks)
+
+if __name__ == '__main__':
+    # Experiment: Rotate c major profile and determine sharps/flats
+    base = ref['c \\major'][:12]
+    curr = base.copy()
+    for i in range(12):
+        bcnt  = 0
+        ccnt  = 0
+        sharp = 0
+        flat  = 0
+        for mx in zip(base,curr):
+            bcnt += mx[0]
+            ccnt += mx[1]
+            if mx[1] and mx[0] != mx[1]:
+                if bcnt < ccnt:
+                    flat  += 1
+                else:
+                    sharp += 1
+        print(curr,notes[i],'major/',notes[(i+9)%12],'minor','#'*sharp + 'b'*flat)
+        curr.insert(0,curr.pop())
 
