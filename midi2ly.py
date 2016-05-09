@@ -25,9 +25,12 @@ def get_track_instrument(p):
         return None,None
     return p[0].text,p[1].text
 
+time_sig =''
 def parse_meta_track(p):
     for ev in p:
         print('% meta:',ev)
+        if type(ev) is midi.events.TimeSignatureEvent:
+            time_sig = '\\numericTimeSignature\\time %d/%d' % (ev.numerator,ev.denominator)
 
 LILY_NOTE = []
 for x in [",,,,",",,,",",,",",","","'","''","'''"]:
@@ -540,16 +543,16 @@ if len(rpiano_voices) > 0:
     pianostaff  = '\\new PianoStaff << \\context Staff = "1" << '
     pianostaff += '\\set PianoStaff.instrumentName = #"Piano"'
     for v,x in zip(rpiano_voices,['One','Two','Three','Four']):
-        pianostaff += '\\context Voice = "RPiano%s" { \\voice%s \\clef "treble" \\key %s  \\numericTimeSignature\\time 4/4 \\%s}' % (x,x,key,v)
+        pianostaff += '\\context Voice = "RPiano%s" { \\voice%s \\clef "treble" \\key %s %s \\%s}' % (x,x,key,time_sig,v)
     pianostaff += '>> \\context Staff = "2" <<'
     for v,x in zip(lpiano_voices,['One','Two','Three','Four']):
-        pianostaff += '\\context Voice = "LPiano%s" { \\voice%s \\clef "bass" \\key %s  \\numericTimeSignature\\time 4/4 \\%s}' % (x,x,key,v)
+        pianostaff += '\\context Voice = "LPiano%s" { \\voice%s \\clef "bass" \\key %s %s \\%s}' % (x,x,key,time_sig,v)
     pianostaff += '>> >>'
 
 if len(drum_voices) > 0:
     drumstaff  = '\\new DrumStaff <<'
     for v,x in zip(drum_voices,['One','Two','Three','Four']):
-        drumstaff += '\\new DrumVoice {\\voice%s \\clef "percussion" \\numericTimeSignature\\time 4/4 \\%s}' % (x,v)
+        drumstaff += '\\new DrumVoice {\\voice%s \\clef "percussion" %s \\%s}' % (x,time_sig,v)
     drumstaff += '>>'
 
 
@@ -561,7 +564,7 @@ print("""
             \\set Score.alternativeNumberingStyle = #'numbers-with-letters
 """)
 for v,x in zip(song_voices,['One','Two','Three','Four']):
-    print('\\new Voice = "melody%s" { \\voice%s \\clef "bass" \\key %s  \\numericTimeSignature\\time 4/4 \\%s}' % (x,x,key,v))
+    print('\\new Voice = "melody%s" { \\voice%s \\clef "bass" \\key %s %s \\%s}' % (x,x,key,time_sig,v))
 print(pianostaff)
 print(drumstaff)
 print("""

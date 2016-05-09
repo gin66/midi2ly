@@ -318,6 +318,9 @@ class SetTempoEvent(MetaEvent):
         self.data = [(val >> (16 - (8 * x)) & 0xFF) for x in range(3)]
     mpqn = property(get_mpqn, set_mpqn)
 
+    def __repr__(self):
+        return self.__baserepr__(['bpm','mpqn'])
+
 class SmpteOffsetEvent(MetaEvent):
     name = 'SMPTE Offset'
     metacommand = 0x54
@@ -351,6 +354,9 @@ class TimeSignatureEvent(MetaEvent):
     def set_thirtyseconds(self, val):
         self.data[3] = val
     thirtyseconds = property(get_thirtyseconds, set_thirtyseconds)
+
+    def __repr__(self):
+        return self.__baserepr__(['numerator','denominator','metronome','thirtyseconds'])
 
 class KeySignatureEvent(MetaEvent):
     #__slots__ = ['alternatives', 'minor']
