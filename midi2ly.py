@@ -1,10 +1,12 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.4
 import midi
 import sys
+sys.path.append('python_midi')
+import python_midi
 
 if len(sys.argv) != 2:
-    print "Usage: {0} <midifile>".format(sys.argv[0])
-    print '     midifile: Title - Composer.mid'
+    print("Usage: {0} <midifile>".format(sys.argv[0]))
+    print('     midifile: Title - Composer.mid')
     sys.exit(2)
 
 midifile = sys.argv[1]
@@ -25,7 +27,7 @@ def get_track_instrument(p):
 
 def parse_meta_track(p):
     for ev in p:
-        print '% meta:',ev
+        print('% meta:',ev)
 
 LILY_NOTE = []
 for x in [",,,,",",,,",",,",",","","'","''","'''"]:
@@ -40,7 +42,7 @@ LILY_PERC = {
         49:'cymca'
         }
 
-print '%',LILY_NOTE
+print('%',LILY_NOTE)
 durations = [
         None,
         ['32'],
@@ -78,13 +80,13 @@ durations = [
     ]
 def select_duration(tick,nextbar,dt):
     if dt < 0:
-        print 'negative dt',dt
+        print('negative dt',dt)
         raise
     v32 = int(round(16.0*dt/FULLTICK))*2
     if v32 == 0:
         v32 = 2
     res = durations[v32],FULLTICK//32 * v32
-    print '%% select_duration(',tick,',',nextbar,',',dt,')=',res
+    print('%% select_duration(',tick,',',nextbar,',',dt,')=',res)
     return res
 
 for p in pattern:
@@ -107,11 +109,11 @@ for i in range(len(ticks)-1):
     else:
         dticks[dt]  = 1
 for dt in sorted([d for d in dticks]):
-    print '% ',dt,dticks[dt]
+    print('% ',dt,dticks[dt])
 
 FULLTICK = 16*120.0
 FULLBAR  = FULLTICK
-print('%% Full tick aka 4 fourth is set to %d' % FULLTICK)
+print(('%% Full tick aka 4 fourth is set to %d' % FULLTICK))
 
 all_lily   = {}
 track_type = {}
@@ -141,7 +143,7 @@ for p in pattern:
     lily = all_lily[k]
     transient = {}
     for e in p:
-        print '%% ', repr(e)
+        print('%% ', repr(e))
         if type(e) is midi.events.NoteOnEvent and e.data[1] > 0:
             if e.data[0] in transient:
                 transient[e.data[0]].append(e)
@@ -154,7 +156,7 @@ for p in pattern:
         if type(e) is midi.events.NoteOnEvent and e.data[1] == 0 \
                 or type(e) is midi.events.NoteOffEvent:
             if e.data[0] not in transient:
-                print '%% NoteOff without NoteOn: ',e
+                print('%% NoteOff without NoteOn: ',e)
                 raise
             se = transient[e.data[0]].pop(0)
             if len(transient[e.data[0]]) == 0:
@@ -165,12 +167,12 @@ for p in pattern:
             if se.tick not in lily:
                 lily[se.tick] = []
             lily[se.tick].append( [note,dt,False] )
-            print '%% => ',se.tick,str( [note,dt] )
+            print('%% => ',se.tick,str( [note,dt] ))
     if len(transient) > 0:
         raise
 
 # Guess the key
-print '% Statistik:',stats
+print('% Statistik:',stats)
 ref = {
         'c \\major': [1,0,1,0,1,1,0,1,0,1,0,1],
         'g \\major': [1,0,1,0,1,0,1,1,0,1,0,1],
@@ -188,11 +190,11 @@ ref = {
 rmax = [None,None]
 for r in ref:
     s = sum(h*(f-0.5) for h,f in zip(stats,ref[r]))
-    print '%% %s %.2f' % (r,s)
+    print('%% %s %.2f' % (r,s))
     if rmax[0] is None or rmax[0] < s:
         rmax = [s,r]
 key = rmax[1]
-print '%% -> Selected:',key
+print('%% -> Selected:',key)
 
 # Identify overlapping notes
 for k in all_lily:
@@ -313,7 +315,7 @@ for k in all_lily:
                 if n[1] + tick > cur_tick:
                     s.append(n[0])
             if len(s) == 0:
-                print '%% STRANGE: NO NOTE to set:',ns,tick,cur_tick
+                print('%% STRANGE: NO NOTE to set:',ns,tick,cur_tick)
                 continue
             if len(s) > 1:
                 s = ['<'] + s + ['>']
@@ -328,7 +330,7 @@ for k in all_lily:
             if ns[0][-1]:
                 cbar.append('~')
 
-            print '%% COLLECT',ns,'to bar ',len(bars[k]),':',cbar
+            print('%% COLLECT',ns,'to bar ',len(bars[k]),':',cbar)
 
             cur_tick += dt
 
@@ -414,7 +416,7 @@ for c in candid:
                 break
 
 for c in feasible:
-    print '%% feasible:',c
+    print('%% feasible:',c)
 
 # Check for sequences > 2
 for v in dup_dict:
@@ -429,7 +431,7 @@ bar_func = [('orig',1,None,lambda x,pars:x+' |') for i in range(max_bar)]
 feasible = sorted(feasible,key=lambda x:len(x[0])*(x[1]-x[2]*0.5)*x[3],reverse=True)
 
 for f in feasible:
-    print '%% OK',f
+    print('%% OK',f)
 
 repeated = set()
 for f in feasible:
@@ -442,7 +444,7 @@ for f in feasible:
         if ok:
             for i in range(c[0],c[0]+(1+repeat)*delta):
                 repeated.add(i)
-            print '%%',c,"-> repeat",delta,'bars with',repeat,'alternate end(s)'
+            print('%%',c,"-> repeat",delta,'bars with',repeat,'alternate end(s)')
             s = '' if repeat <= 1 else '\\mark "%dx" ' % (repeat+1)
             bar_func[c[0]]           = ('alt_rep A %d repeat=%d' % (c[0],repeat),1,[repeat+1,s], \
                         lambda x,pars: '\\repeat volta %d {%s %s |' % (pars[0],pars[1],x))
@@ -470,7 +472,7 @@ for f in feasible:
         if ok:
             for i in range(c[0],c[0]+repeat-1):
                 repeated.add(i)
-            print '%%',c,"-> multi repeat"
+            print('%%',c,"-> multi repeat")
             bar_func[c[0]] = ('multi %d' % repeat,repeat,repeat,\
                         lambda x,pars: '\\repeat percent %d { %s }|' % (pars,x))
 
@@ -478,30 +480,30 @@ for f in feasible:
     c,delta,skip,repeat = f
     if skip == 0 and delta == 1:
         if c[0] not in repeated:
-            print '%%',c,"-> simple repeat"
+            print('%%',c,"-> simple repeat")
             bar_func[c[0]] = ('simple',2,None,lambda x,pars: '\\repeat percent 2 { %s }|' % x)
 
 # RECREATE in lilypond format
-print '\\version "2.18.2"'
+print('\\version "2.18.2"')
 
 finfo = sys.argv[1].replace('.mid','').split(' - ')
 title = finfo[0]
 composer = finfo[1] if len(finfo) > 1 else ''
-print '\\header {'
-print '  title = "%s"' % title
-print '  composer = "%s"' % composer
-print '}'
+print('\\header {')
+print('  title = "%s"' % title)
+print('  composer = "%s"' % composer)
+print('}')
 
 for k in voices:
     if track_type[k] == 'drums':
-        print k,'= \\drummode {'
+        print(k,'= \\drummode {')
     else:
-        print k,'= {'
+        print(k,'= {')
     i = 0
     while i < max_bar:
         info,delta,pars,bfunc = bar_func[i]
         s = bfunc(bars[k][i],pars)
-        print s,' %% %d' % i,info
+        print(s,' %% %d' % i,info)
         i += delta
     print('}')
 
@@ -520,10 +522,10 @@ while len(voices) > 0:
     else:
         song_voices.append(k)
 
-print '%% Piano links =',lpiano_voices
-print '%% Piano rechts=',rpiano_voices
-print '%% Drum=' ,drum_voices
-print '%% Song=' ,song_voices
+print('%% Piano links =',lpiano_voices)
+print('%% Piano rechts=',rpiano_voices)
+print('%% Drum=' ,drum_voices)
+print('%% Song=' ,song_voices)
 
 pianostaff = ''
 drumstaff  = ''
@@ -546,18 +548,18 @@ if len(drum_voices) > 0:
     drumstaff += '>>'
 
 
-print """
+print("""
 % The score definition
 \\book {
   \\score {
     <<
             \\set Score.alternativeNumberingStyle = #'numbers-with-letters
-"""
+""")
 for v,x in zip(song_voices,['One','Two','Three','Four']):
-    print '\\new Voice = "melody%s" { \\voice%s \\clef "bass" \\key %s  \\numericTimeSignature\\time 4/4 \\%s}' % (x,x,key,v)
-print pianostaff
-print drumstaff
-print """
+    print('\\new Voice = "melody%s" { \\voice%s \\clef "bass" \\key %s  \\numericTimeSignature\\time 4/4 \\%s}' % (x,x,key,v))
+print(pianostaff)
+print(drumstaff)
+print("""
     >>
     \\layout {}
   }
@@ -565,23 +567,23 @@ print """
         tagline = "%s"
     }
 }
-""" % title
+""" % title)
 
-print """
+print("""
 % The score definition
 \\score {
     \\unfoldRepeats
     <<
-"""
+""")
 for v in song_voices:
-    print '\\new Voice = melody \\%s' % v
-print pianostaff
-print drumstaff
-print """
+    print('\\new Voice = melody \\%s' % v)
+print(pianostaff)
+print(drumstaff)
+print("""
     >>
     \\midi {
             \\tempo 4 = 127
     }
 }
-"""
+""")
 
