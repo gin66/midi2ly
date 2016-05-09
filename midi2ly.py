@@ -1,8 +1,7 @@
 #!/usr/bin/env python3.4
-import midi
 import sys
 sys.path.append('python_midi')
-import python_midi
+import python_midi as midi
 
 if len(sys.argv) != 2:
     print("Usage: {0} <midifile>".format(sys.argv[0]))

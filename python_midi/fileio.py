@@ -12,12 +12,12 @@ class FileReader(object):
         for track in pattern:
             self.parse_track(midifile, track)
         return pattern
-        
+
     def parse_file_header(self, midifile):
         # First four bytes are MIDI header
         magic = midifile.read(4)
-        if magic != 'MThd':
-            raise TypeError("Bad header in MIDI file.")
+        if magic != b'MThd':
+            raise TypeError("Bad header in MIDI file." + str(magic))
         # next four bytes are header size
         # next two bytes specify the format version
         # next two bytes specify the number of tracks
@@ -33,12 +33,12 @@ class FileReader(object):
         if hdrsz > DEFAULT_MIDI_HEADER_SIZE:
             midifile.read(hdrsz - DEFAULT_MIDI_HEADER_SIZE)
         return Pattern(tracks=tracks, resolution=resolution, format=format)
-            
+
     def parse_track_header(self, midifile):
         # First four bytes are Track header
         magic = midifile.read(4)
-        if magic != 'MTrk':
-            raise TypeError("Bad track header in MIDI file: " + magic)
+        if magic != b'MTrk':
+            raise TypeError("Bad track header in MIDI file: " + str(magic))
         # next four bytes are track size
         trksz = unpack(">L", midifile.read(4))[0]
         return trksz
@@ -58,23 +58,23 @@ class FileReader(object):
         # first datum is varlen representing delta-time
         tick = read_varlen(trackdata)
         # next byte is status message
-        stsmsg = ord(next(trackdata))
+        stsmsg = next(trackdata)
         # is the event a MetaEvent?
         if MetaEvent.is_event(stsmsg):
-            cmd = ord(next(trackdata))
+            cmd = next(trackdata)
             if cmd not in EventRegistry.MetaEvents:
                 warn("Unknown Meta MIDI Event: " + repr(cmd), Warning)
                 cls = UnknownMetaEvent
             else:
                 cls = EventRegistry.MetaEvents[cmd]
             datalen = read_varlen(trackdata)
-            data = [ord(next(trackdata)) for x in range(datalen)]
+            data = [next(trackdata) for x in range(datalen)]
             return cls(tick=tick, data=data, metacommand=cmd)
         # is this event a Sysex Event?
         elif SysexEvent.is_event(stsmsg):
             data = []
             while True:
-                datum = ord(next(trackdata))
+                datum = next(trackdata)
                 if datum == 0xF7:
                     break
                 data.append(datum)
@@ -89,13 +89,13 @@ class FileReader(object):
                 cls = EventRegistry.Events[key]
                 channel = self.RunningStatus & 0x0F
                 data.append(stsmsg)
-                data += [ord(next(trackdata)) for x in range(cls.length - 1)]
+                data += [next(trackdata) for x in range(cls.length - 1)]
                 return cls(tick=tick, channel=channel, data=data)
             else:
                 self.RunningStatus = stsmsg
                 cls = EventRegistry.Events[key]
                 channel = self.RunningStatus & 0x0F
-                data = [ord(next(trackdata)) for x in range(cls.length)]
+                data = [next(trackdata) for x in range(cls.length)]
                 return cls(tick=tick, channel=channel, data=data)
         raise Warning("Unknown MIDI Event: " + repr(stsmsg))
 
@@ -107,12 +107,12 @@ class FileWriter(object):
 
     def write_file_header(self, midifile, pattern):
         # First four bytes are MIDI header
-        packdata = pack(">LHHH", 6,    
-                            pattern.format, 
+        packdata = pack(">LHHH", 6,
+                            pattern.format,
                             len(pattern),
                             pattern.resolution)
         midifile.write('MThd%s' % packdata)
-            
+
     def write_track(self, midifile, track):
         buf = ''
         self.RunningStatus = None
