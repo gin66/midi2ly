@@ -2,6 +2,7 @@
 import sys
 sys.path.append('python_midi')
 import python_midi as midi
+import key_guess
 
 if len(sys.argv) != 2:
     print("Usage: {0} <midifile>".format(sys.argv[0]))
@@ -117,15 +118,20 @@ print(('%% Full tick aka 4 fourth is set to %d' % FULLTICK))
 all_lily   = {}
 track_type = {}
 stats = [0]*12
+keys = {}
 for p in pattern:
     track,instrument = get_track_instrument(p)
     if track is None:
         parse_meta_track(p)
         continue
+
     k = track + '_' + instrument
     k = k.replace('-','_').replace(' ','_')
     if k not in all_lily:
         all_lily[k] = {}
+
+    keys[k] = key_guess.calculate(p)
+    print('%%',k,":",keys[k])
 
     if 'Bluebird' in k:
         CONV = LILY_PERC

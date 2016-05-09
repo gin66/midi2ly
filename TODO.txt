@@ -1,0 +1,7 @@
+WISHLIST:
+* Scan midi stream and determine key dynamically in order to find key changes
+* Scan midi stream for pitch setting/changes
+* Identify instruments from midi: especially drum and piano
+* Scan midi stream for loudness changes and guess time signature 4/4, 3/4,...
+* Lyrics
+
