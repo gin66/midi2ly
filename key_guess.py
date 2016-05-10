@@ -2,23 +2,38 @@
 import sys
 import python_midi as midi
 
-notes = ['C','Cis/Des','D','Dis/Es','E','F','Fis/Ges','G','Gis/As','A','Ais/Bb','B']
+notes = ['C  /C  ','Cis/Des','D  /D  ','Dis/Ees','E  /E  ','F  /F  ',
+         'Fis/Ges','G  /G  ','Gis/As ','A  /A  ','Ais/Bb ','B  /B  ']
 
-#                                               number of sharps +/flats -
-ref = {             # c   d   e f   g   a   h   | / major 0/minor 1 fla
-        'c \\major': [1,0,1,0,1,1,0,1,0,1,0,1,  0,0],
-        'g \\major': [1,0,1,0,1,0,1,1,0,1,0,1,  1,0],
-        'd \\major': [0,1,1,0,1,0,1,1,0,1,0,1,  2,0],
-        'a \\major': [0,1,1,0,1,0,1,0,1,1,0,1,  3,0],
-        'e \\major': [0,1,0,1,1,0,1,0,1,1,0,1,  4,0],
-        'h \\major': [0,1,0,1,1,0,1,0,1,0,1,1,  5,0],
-
-        'f \\major': [1,0,1,0,1,1,0,1,0,1,1,0, -1,1],
-        'b \\major': [1,0,1,1,0,1,0,1,0,1,1,0, -2,1],
-        'c \\minor': [1,0,1,1,0,1,0,1,1,0,1,0, -3,1],
-        'f \\minor': [1,1,0,1,0,1,0,1,1,0,1,0, -4,1],
-        'b \\minor': [1,1,0,1,0,1,1,0,1,0,1,0, -5,1]
+#                                                           number of sharps +/flats -
+ref = {             # c   d   e f   g   a   h    alternate  |
+        'C   \\major': [1,0,1,0,1,1,0,1,0,1,0,1,  'A   \\minor',0],
     }
+
+def calculate_scales():
+    global ref
+    # Rotate c major profile and determine sharps/flats
+    base = ref['C   \\major'][:12]
+    curr = base.copy()
+    for i in range(12):
+        bcnt  = 0
+        ccnt  = 0
+        sharp = 0
+        flat  = 0
+        for mx in zip(base,curr):
+            bcnt += mx[0]
+            ccnt += mx[1]
+            if mx[1] and mx[0] != mx[1]:
+                if bcnt < ccnt:
+                    flat  += 1
+                else:
+                    sharp += 1
+        major = notes[ i   %12]
+        minor = notes[(i+9)%12]
+        major = (major+'/'+major).split('/')[0] + ' \major'
+        minor = (minor+'/'+minor).split('/')[0] + ' \minor'
+        ref[major] = curr + [minor,sharp-flat]
+        curr.insert(0,curr.pop())   # Rotate one half-tone
 
 def calculate(p):
     global ref
@@ -57,22 +72,6 @@ def calculate(p):
     return(key_ticks)
 
 if __name__ == '__main__':
-    # Experiment: Rotate c major profile and determine sharps/flats
-    base = ref['c \\major'][:12]
-    curr = base.copy()
-    for i in range(12):
-        bcnt  = 0
-        ccnt  = 0
-        sharp = 0
-        flat  = 0
-        for mx in zip(base,curr):
-            bcnt += mx[0]
-            ccnt += mx[1]
-            if mx[1] and mx[0] != mx[1]:
-                if bcnt < ccnt:
-                    flat  += 1
-                else:
-                    sharp += 1
-        print(curr,notes[i],'major/',notes[(i+9)%12],'minor','#'*sharp + 'b'*flat)
-        curr.insert(0,curr.pop())
-
+    calculate_scales()
+    for c in ref:
+        print(c,ref[c])

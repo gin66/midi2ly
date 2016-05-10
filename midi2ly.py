@@ -134,7 +134,7 @@ for p in pattern:
         all_lily[k] = {}
 
     keys[k] = key_guess.calculate(p)
-    print('%%',k,":",keys[k])
+    print('%% KEYS',k,":",keys[k])
 
     if 'Bluebird' in k:
         CONV = LILY_PERC
