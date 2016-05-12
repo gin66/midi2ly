@@ -431,65 +431,91 @@ for v in dup_dict:
     d = dup_dict[v]
     c = sorted([x for x in d if x >= v])
     if len(c) > 2 and c[-1]-v == len(c)-1:
-        feasible.append( (c,0,0,len(c)) )
+        feasible.append( (c,1,0,len(c)) )
 
-bar_func = [('orig',1,None,lambda x,pars:x+' |') for i in range(max_bar)]
+bar_deco = []
+for i in range(max_bar):
+    bar_deco.append( { 'info'     :'orig',
+                       'pre'      : '',
+                       'fmt'      : '%(pre)s %(bar)s %(post)s  %% %(info)s',
+                       'post'     : ' |',
+                       'repeated' : False} )
 
 # SORT feasible
-feasible = sorted(feasible,key=lambda x:len(x[0])*(x[1]-x[2]*0.5)*x[3],reverse=True)
+feasible = sorted(feasible,key=lambda x:(x[1]-x[2])*x[3],reverse=True)
 
 for f in feasible:
     print('%% OK',f)
 
-repeated = set()
 for f in feasible:
     c,delta,skip,repeat = f
-    if skip <= 1 and delta >= 2:
+    if skip <= delta//2 and delta >= 2:
+        last_bar = min(c[0]+(1+repeat)*delta,max_bar)-1
+
         ok = True
-        for i in range(c[0],c[0]+(1+repeat)*delta):
-            if i in repeated:
+        for deco in bar_deco[c[0]:last_bar+1]:
+            if deco['repeated']:
                 ok = False
         if ok:
-            for i in range(c[0],c[0]+(1+repeat)*delta):
-                repeated.add(i)
-            print('%%',c,"-> repeat",delta,'bars with',repeat,'alternate end(s)')
+            for deco in bar_deco[c[0]:last_bar+1]:
+                deco['repeated'] = True
+
+            s = '%% %s -> %d repeats of %d bars' % (str(c),repeat+1,delta)
+            if skip > 0:
+                s += ' with alternate end(s) of %d bars' % (delta-skip)
+            print(s)
+            #   delta=4,skip = 0,repeat = 2:
+            #                 x  x  x  A  B  C  D  A  B  C  D  A  B  C  D  x  x  x
+            #       alt_rep:  +  +  +  A  +  +  B  -  -  -  -  -  -  -  -  +  +  +
+            #                        R{          }
+            #
+            #   delta=4,skip = 2,repeat = 1:
+            #                 x  x  x  A  B     C  D  A  B  E  F  x  x  x
+            #       alt_rep:  +  +  +  A  B     C  E  -  -  D  F  +  +  +
+            #                        R{    } A {    }      {    }}
+            #
+            #   delta=4,skip = 2,repeat = 2:
+            #                 x  x  x  A  B     C  D  A  B  E  F  A  B  G  H  x  x  x
+            #       alt_rep:  +  +  +  A  B     C  E  -  -  D  E  -  -  D  F  +  +  +
+            #                        R{    } A{{    }      {    }      {    }}
+            #
+            #   delta=4,skip = 1,repeat = 2:
+            #                 x  x  x  A  B  C     D  A  B  C  E  A  B  C  F  x  x  x
+            #       alt_rep:  +  +  +  A  +  B     C  -  -  -  G  -  -  -  H  +  +  +
+            #                        R{       } A{{ }         { }         { }}
             s = '' if repeat <= 1 else '\\mark "%dx" ' % (repeat+1)
-            bar_func[c[0]]           = ('alt_rep A %d repeat=%d' % (c[0],repeat),1,[repeat+1,s], \
-                        lambda x,pars: '\\repeat volta %d {%s %s |' % (pars[0],pars[1],x))
-            if skip == 0:
-                bar_func[c[0]+  delta-1] = ('alt_rep E %d repeat=%d' % (c[0],repeat),repeat*delta+1,None, \
-                            lambda x,pars: '%s |}' % x)
-            else:
-                bar_func[c[0]+  delta-1] = ('alt_rep B %d repeat=%d' % (c[0],repeat),delta,None, \
-                            lambda x,pars: '}\\alternative{{%s|' % x)
-                for r in range(2,repeat+2):
-                    if r <= repeat:
-                        bar_func[c[0]+r*delta-1] = ('alt_rep C %d %d' % (c[0],r),delta,None, \
-                            lambda x,pars: '}{%s |'  % x)
-                    else:
-                        bar_func[c[0]+r*delta-1] = ('alt_rep D %d' % c[0],    1,None, \
-                            lambda x,pars: '}{%s |}}' % x)
+            deco = bar_deco[c[0]]
+            deco['info'] = 'alt_rep A %d repeat=%d' % (c[0],repeat)
+            deco['pre' ] = '\\repeat volta %d {%s' % (repeat+1,s)
+            deco = bar_deco[c[0]+delta-skip-1]
+            deco['post'] = '}' if skip == 0 else '}\\alternative{'
+
+            # Blank all repeated bars
+            for r in range(1,repeat+2):
+                bar_deco[c[0]+r*delta-skip]['pre' ] = '{'
+                bar_deco[c[0]+r*delta-1   ]['post'] = '}'
+            for r in range(2,repeat+2):
+                for deco in bar_deco[c[0]+(r-1)*delta : c[0]+r*delta-skip]:
+                    deco['fmt'] = '%% SKIP ' + deco['fmt']
+            bar_deco[c[0]+(repeat+1)*delta-1 ]['post'] += '}'
 
 for f in feasible:
     c,delta,skip,repeat = f
-    if skip == 0 and delta == 0 and repeat > 2:
+    if skip == 0 and delta == 1 and repeat >= 1:
         ok = True
-        for i in range(c[0],c[0]+repeat-1):
-            if i in repeated:
+        for deco in bar_deco[c[0]:c[0]+repeat]:
+            if deco['repeated']:
                 ok = False
         if ok:
-            for i in range(c[0],c[0]+repeat-1):
-                repeated.add(i)
-            print('%%',c,"-> multi repeat")
-            bar_func[c[0]] = ('multi %d' % repeat,repeat,repeat,\
-                        lambda x,pars: '\\repeat percent %d { %s }|' % (pars,x))
-
-for f in feasible:
-    c,delta,skip,repeat = f
-    if skip == 0 and delta == 1:
-        if c[0] not in repeated:
+            deco = bar_deco[c[0]]
             print('%%',c,"-> simple repeat")
-            bar_func[c[0]] = ('simple',2,None,lambda x,pars: '\\repeat percent 2 { %s }|' % x)
+            deco['info']     = 'simple'
+            deco['pre' ]     = '\\repeat percent %d {' % (repeat)
+            deco['post']     = '}|'
+            deco['repeated'] = True
+            for deco in bar_deco[c[0]+1:c[0]+repeat+1]:
+                deco['fmt'] = '%% SKIP: ' + deco['fmt']
+                deco['repeated'] = True
 
 # RECREATE in lilypond format
 print('\\version "2.18.2"')
@@ -507,12 +533,9 @@ for k in voices:
         print(k,'= \\drummode {')
     else:
         print(k,'= {')
-    i = 0
-    while i < max_bar:
-        info,delta,pars,bfunc = bar_func[i]
-        s = bfunc(bars[k][i],pars)
-        print(s,' %% %d' % i,info)
-        i += delta
+    for deco,bar in zip(bar_deco,bars[k]):
+        deco['bar'] = bar
+        print(deco['fmt'] % deco)
     print('}')
 
 lpiano_voices = []
