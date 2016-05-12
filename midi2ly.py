@@ -496,7 +496,7 @@ for f in feasible:
                     bar_deco[min(c[0]+r*delta-1   ,last_bar)]['post'] = '| }'
             # Blank all repeated bars
             for r in range(2,repeat+2):
-                for deco in bar_deco[c[0]+(r-1)*delta : min(c[0]+r*delta-skip,last_bar)]:
+                for deco in bar_deco[c[0]+(r-1)*delta : min(c[0]+r*delta-skip-1,last_bar)+1]:
                     deco['fmt'] = '%% SKIP ' + deco['fmt']
             if skip > 0:
                 bar_deco[min(c[0]+(repeat+1)*delta-1,last_bar)]['post'] = '}} |'
