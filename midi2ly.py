@@ -141,9 +141,9 @@ for p in pattern:
         track_type[k] = 'drums'
     else:
         CONV = LILY_NOTE
-        if 'L' in k:
+        if 'L' in instrument:
             track_type[k] = 'piano left'
-        elif 'R' in k:
+        elif 'R' in instrument:
             track_type[k] = 'piano right'
         else:
             track_type[k] = 'song'
@@ -488,16 +488,18 @@ for f in feasible:
             deco['info'] = 'alt_rep A %d repeat=%d' % (c[0],repeat)
             deco['pre' ] = '\\repeat volta %d {%s' % (repeat+1,s)
             deco = bar_deco[c[0]+delta-skip-1]
-            deco['post'] = '}' if skip == 0 else '}\\alternative{'
+            deco['post'] = '| }' if skip == 0 else '| }\\alternative{'
 
+            if skip > 0:
+                for r in range(1,repeat+2):
+                    bar_deco[    c[0]+r*delta-skip          ]['pre' ] = '{'
+                    bar_deco[min(c[0]+r*delta-1   ,last_bar)]['post'] = '| }'
             # Blank all repeated bars
-            for r in range(1,repeat+2):
-                bar_deco[c[0]+r*delta-skip]['pre' ] = '{'
-                bar_deco[c[0]+r*delta-1   ]['post'] = '}'
             for r in range(2,repeat+2):
-                for deco in bar_deco[c[0]+(r-1)*delta : c[0]+r*delta-skip]:
+                for deco in bar_deco[c[0]+(r-1)*delta : min(c[0]+r*delta-skip,last_bar)]:
                     deco['fmt'] = '%% SKIP ' + deco['fmt']
-            bar_deco[c[0]+(repeat+1)*delta-1 ]['post'] += '}'
+            if skip > 0:
+                bar_deco[min(c[0]+(repeat+1)*delta-1,last_bar)]['post'] = '}} |'
 
 for f in feasible:
     c,delta,skip,repeat = f
