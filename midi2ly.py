@@ -1,15 +1,45 @@
 #!/usr/bin/env python3.4
 import sys
 sys.path.append('python_midi')
+import argparse
+import re
 import python_midi as midi
 import key_guess
 
-if len(sys.argv) != 2:
-    print("Usage: {0} <midifile>".format(sys.argv[0]))
-    print('     midifile: Title - Composer.mid')
-    sys.exit(2)
+def get_title_composer_from(args):
+    global title
+    global composer
+    title    = 'Unknown Title'
+    composer = 'Unknown Composer'
+    finfo = re.sub('\.[mM][iI][dD][iI]?','',args['midifile'])
+    if finfo != args['midifile']:
+        finfo = re.split(' *- *',finfo)
+        if len(finfo) == 2:
+            title    = finfo[1] if args['comp_first'] else finfo[0]
+            composer = finfo[0] if args['comp_first'] else finfo[1]
+    if args['title'] is not None:
+        title    = args['title'][0]
+    if args['composer'] is not None:
+        composer = args['composer'][0]
 
-midifile = sys.argv[1]
+parser = argparse.ArgumentParser(description= \
+        'Tool to convert a midi-file (e.g. from Logic Pro/X) to lilypond format\n'+
+        'The midi-filename should be "<Title> - <Composer>.mid" or ".midi".\n'+
+        'If title and composer are reversed, then use the -r switch.\n'+
+        'Otherwise provide title and composer via commandline switch (-t/-c).')
+parser.add_argument('-o', nargs=1, dest='file',     help='Output processing result to file')
+parser.add_argument('-t', nargs=1, dest='title',    help='Title of the song')
+parser.add_argument('-c', nargs=1, dest='composer', help='Composer of the song')
+parser.add_argument('-r', action='store_true', dest='comp_first', help='Composer and Title reversed in filename')
+parser.add_argument('midifile', help='Midifile to be processed')
+args = vars(parser.parse_args())
+
+if args['file'] is not None:
+    sys.stdout = open(args['file'][0], 'w')
+
+get_title_composer_from(args)
+
+midifile = args['midifile']
 pattern = midi.read_midifile(midifile)
 
 # Logic Pro X
@@ -521,10 +551,6 @@ for f in feasible:
 
 # RECREATE in lilypond format
 print('\\version "2.18.2"')
-
-finfo = sys.argv[1].replace('.mid','').split(' - ')
-title = finfo[0]
-composer = finfo[1] if len(finfo) > 1 else ''
 print('\\header {')
 print('  title = "%s"' % title)
 print('  composer = "%s"' % composer)
