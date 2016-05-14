@@ -6,6 +6,7 @@ import re
 import python_midi   as midi
 import lib.lilypond  as lilypond
 import lib.key_guess as key_guess
+from   lib.miditrack import *
 
 def get_title_composer_from(args):
     global title
@@ -42,23 +43,17 @@ if args.file is not None:
 midifile = args.midifile
 try:
     pattern = midi.read_midifile(midifile)
+    tracks  = []
+    for p in pattern:
+        mt = MidiTrack(p)
+        tracks.append(mt)
+        print(mt)
 except TypeError as e:
     print('Cannot read "%s" as midifile' % args.midifile)
     print('Exception says: %s' % e)
     sys.exit(2)
 
-# Logic Pro X
-# - uses first track for metadata
-# - each region is coded as a separate track
-# - seldom uses NoteOff but NoteOn with velocity zero instead
-# - First two events are TrackNameEvent and InstrumentNameEvent
-
-def get_track_instrument(p):
-    if type(p[0]) is not midi.events.TrackNameEvent:
-        return None,None
-    if type(p[1]) is not midi.events.InstrumentNameEvent:
-        return None,None
-    return p[0].text,p[1].text
+sys.exit(0)
 
 time_sig =''
 def parse_meta_track(p):
@@ -66,17 +61,6 @@ def parse_meta_track(p):
         print('% meta:',ev)
         if type(ev) is midi.events.TimeSignatureEvent:
             time_sig = '\\numericTimeSignature\\time %d/%d' % (ev.numerator,ev.denominator)
-
-for p in pattern:
-    p.make_ticks_abs()
-
-# Get all ticks
-ticks=set()
-for p in pattern:
-    for e in p:
-        if type(e) is midi.events.NoteOnEvent and e.data[1] > 0:
-            ticks.add(e.tick)
-ticks=sorted(list(ticks))
 
 # Get deltas => BASED ON THIS SET THE CLOCKTICK VALUE !!!!
 dticks = {}
