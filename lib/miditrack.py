@@ -48,19 +48,7 @@ class MidiTrack(object):
             st += 4*cls.resolution
 
     @classmethod
-    def get_bar_decorators_with_repeat(cls,key_list):
-        bar_deco = []
-        for i in range(len(MidiTrack.bars)):
-            bar_deco.append( { 'info'     :'orig',
-                               'pre'      : '',
-                               'fmt_voice': '%(bol)s %(key)s %(timesig)s %(pre)s %(bar)s %(post)s  %% %(info)s',
-                               'fmt_drum' : '%(bol)s %(timesig)s %(pre)s %(bar)s %(post)s  %% %(info)s',
-                               'post'     : ' |',
-                               'key'      : '',
-                               'timesig'  : '',
-                               'bol'      : '',
-                               'repeated' : False} )
-
+    def identify_repeats(cls):
         # join all lilypond representation of all bars together
         # Only bars to be printed have those. No further selection needed.
         bar_dict = {}
@@ -126,77 +114,106 @@ class MidiTrack(object):
         for c in feasible:
             print('%% feasible:',c)
 
-        for f in feasible:
+        best_used = []
+        best_red  = 0
+        for i in range(len(feasible)):
+            used = []
+            reduced = 0
+            for f in feasible[i:]:
+                c,delta,skip,repeat = f
+                #if skip <= delta//2 and delta >= 2:
+                start,end = c[0],c[0]+delta*(repeat+1)-1
+                ok = True
+                for cx,deltax,skipx,repeatx in used:
+                    startx,endx = cx[0],cx[0]+deltax*(repeatx+1)-1
+                    if endx < start or startx > end:
+                        continue
+                    ok = False
+                    break
+                if ok:
+                    reduced += (delta-skip)*repeat
+                    used.append(f)
+
+            for f in used:
+                print('%% Used repeat xxx:',reduced,f)
+
+            if reduced > best_red:
+                best_red  = reduced
+                best_used = used
+
+        return best_used
+
+    @classmethod
+    def get_bar_decorators_with_repeat(cls,key_list):
+        repeats = cls.identify_repeats()
+        max_bar = len(cls.bars)
+
+        bar_deco = []
+        for i in range(len(MidiTrack.bars)):
+            bar_deco.append( { 'info'     :'orig',
+                               'pre'      : '',
+                               'fmt_voice': '%(bol)s %(key)s %(timesig)s %(pre)s %(bar)s %(post)s  %% %(info)s',
+                               'fmt_drum' : '%(bol)s %(timesig)s %(pre)s %(bar)s %(post)s  %% %(info)s',
+                               'post'     : ' |',
+                               'key'      : '',
+                               'timesig'  : '',
+                               'bol'      : '',
+                               'repeated' : False} )
+
+        for f in repeats:
             c,delta,skip,repeat = f
-            if skip <= delta//2 and delta >= 2:
+            if delta >= 2:
                 last_bar = min(c[0]+(1+repeat)*delta,max_bar)-1
 
-                ok = True
-                for deco in bar_deco[c[0]:last_bar+1]:
-                    if deco['repeated']:
-                        ok = False
-                if ok:
-                    for deco in bar_deco[c[0]:last_bar+1]:
-                        deco['repeated'] = True
+                s = '%% %s -> %d repeats of %d bars' % (str(c),repeat+1,delta)
+                if skip > 0:
+                    s += ' with alternate end(s) of %d bars' % (delta-skip)
+                print(s)
+                #   delta=4,skip = 0,repeat = 2:
+                #                 x  x  x  A  B  C  D  A  B  C  D  A  B  C  D  x  x  x
+                #       alt_rep:  +  +  +  A  +  +  B  -  -  -  -  -  -  -  -  +  +  +
+                #                        R{          }
+                #
+                #   delta=4,skip = 2,repeat = 1:
+                #                 x  x  x  A  B     C  D  A  B  E  F  x  x  x
+                #       alt_rep:  +  +  +  A  B     C  E  -  -  D  F  +  +  +
+                #                        R{    } A {    }      {    }}
+                #
+                #   delta=4,skip = 2,repeat = 2:
+                #                 x  x  x  A  B     C  D  A  B  E  F  A  B  G  H  x  x  x
+                #       alt_rep:  +  +  +  A  B     C  E  -  -  D  E  -  -  D  F  +  +  +
+                #                        R{    } A{{    }      {    }      {    }}
+                #
+                #   delta=4,skip = 1,repeat = 2:
+                #                 x  x  x  A  B  C     D  A  B  C  E  A  B  C  F  x  x  x
+                #       alt_rep:  +  +  +  A  +  B     C  -  -  -  G  -  -  -  H  +  +  +
+                #                        R{       } A{{ }         { }         { }}
+                s = '' if repeat <= 1 else '\\mark "%dx" ' % (repeat+1)
+                deco = bar_deco[c[0]]
+                deco['info'] = 'alt_rep A %d repeat=%d' % (c[0],repeat)
+                deco['pre' ] = '\\repeat volta %d {%s' % (repeat+1,s)
+                deco = bar_deco[c[0]+delta-skip-1]
+                deco['post'] = '| }' if skip == 0 else '| }\\alternative{'
 
-                    s = '%% %s -> %d repeats of %d bars' % (str(c),repeat+1,delta)
-                    if skip > 0:
-                        s += ' with alternate end(s) of %d bars' % (delta-skip)
-                    print(s)
-                    #   delta=4,skip = 0,repeat = 2:
-                    #                 x  x  x  A  B  C  D  A  B  C  D  A  B  C  D  x  x  x
-                    #       alt_rep:  +  +  +  A  +  +  B  -  -  -  -  -  -  -  -  +  +  +
-                    #                        R{          }
-                    #
-                    #   delta=4,skip = 2,repeat = 1:
-                    #                 x  x  x  A  B     C  D  A  B  E  F  x  x  x
-                    #       alt_rep:  +  +  +  A  B     C  E  -  -  D  F  +  +  +
-                    #                        R{    } A {    }      {    }}
-                    #
-                    #   delta=4,skip = 2,repeat = 2:
-                    #                 x  x  x  A  B     C  D  A  B  E  F  A  B  G  H  x  x  x
-                    #       alt_rep:  +  +  +  A  B     C  E  -  -  D  E  -  -  D  F  +  +  +
-                    #                        R{    } A{{    }      {    }      {    }}
-                    #
-                    #   delta=4,skip = 1,repeat = 2:
-                    #                 x  x  x  A  B  C     D  A  B  C  E  A  B  C  F  x  x  x
-                    #       alt_rep:  +  +  +  A  +  B     C  -  -  -  G  -  -  -  H  +  +  +
-                    #                        R{       } A{{ }         { }         { }}
-                    s = '' if repeat <= 1 else '\\mark "%dx" ' % (repeat+1)
-                    deco = bar_deco[c[0]]
-                    deco['info'] = 'alt_rep A %d repeat=%d' % (c[0],repeat)
-                    deco['pre' ] = '\\repeat volta %d {%s' % (repeat+1,s)
-                    deco = bar_deco[c[0]+delta-skip-1]
-                    deco['post'] = '| }' if skip == 0 else '| }\\alternative{'
+                if skip > 0:
+                    for r in range(1,repeat+2):
+                        bar_deco[    c[0]+r*delta-skip          ]['pre' ] = '{'
+                        bar_deco[min(c[0]+r*delta-1   ,last_bar)]['post'] = '| }'
+                # Blank all repeated bars
+                for r in range(2,repeat+2):
+                    for deco in bar_deco[c[0]+(r-1)*delta : min(c[0]+r*delta-skip-1,last_bar)+1]:
+                        deco['bol'] = '%% SKIP-1: '
+                if skip > 0:
+                    bar_deco[min(c[0]+(repeat+1)*delta-1,last_bar)]['post'] = '}} |'
 
-                    if skip > 0:
-                        for r in range(1,repeat+2):
-                            bar_deco[    c[0]+r*delta-skip          ]['pre' ] = '{'
-                            bar_deco[min(c[0]+r*delta-1   ,last_bar)]['post'] = '| }'
-                    # Blank all repeated bars
-                    for r in range(2,repeat+2):
-                        for deco in bar_deco[c[0]+(r-1)*delta : min(c[0]+r*delta-skip-1,last_bar)+1]:
-                            deco['bol'] = '%% SKIP: '
-                    if skip > 0:
-                        bar_deco[min(c[0]+(repeat+1)*delta-1,last_bar)]['post'] = '}} |'
-
-        for f in feasible:
-            c,delta,skip,repeat = f
-            if skip == 0 and delta == 1 and repeat >= 1:
-                ok = True
-                for deco in bar_deco[c[0]:c[0]+repeat]:
-                    if deco['repeated']:
-                        ok = False
-                if ok:
-                    deco = bar_deco[c[0]]
-                    print('%%',c,"-> simple repeat")
-                    deco['info']     = 'simple'
-                    deco['pre' ]     = '\\repeat percent %d {' % (repeat)
-                    deco['post']     = '}|'
-                    deco['repeated'] = True
-                    for deco in bar_deco[c[0]+1:c[0]+repeat+1]:
-                        deco['bol'] = '%% SKIP: '
-                        deco['repeated'] = True
+            elif skip == 0 and delta == 1 and repeat >= 1:
+                deco = bar_deco[c[0]]
+                print('%%',c,"-> simple repeat")
+                deco['info']     = 'simple'
+                deco['pre' ]     = '\\repeat percent %d {' % (repeat+1)
+                deco['post']     = '}|'
+                for deco in bar_deco[c[0]+1:c[0]+repeat+1]:
+                    deco['bol'] = '%% SKIP-2: '
 
         # Add time signatures
         for tick in cls.time_signature:

@@ -72,10 +72,6 @@ if args.list:
         print(mt.index,':',mt)
     sys.exit(0)
 
-lpiano_voices = []
-rpiano_voices = []
-drum_voices   = []
-song_voices   = []
 for mt in MidiTrack.tracklist:
     n = '%d' % mt.index
     if n in args.drum_list:
@@ -128,7 +124,10 @@ print('  title = "%s"' % title)
 print('  composer = "%s"' % composer)
 print('}')
 
-
+lpiano_voices = []
+rpiano_voices = []
+drum_voices   = []
+song_voices   = []
 for mt in MidiTrack.tracklist:
     if mt.output:
         if mt.output_drums:
