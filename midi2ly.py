@@ -36,16 +36,24 @@ parser.add_argument('-c', nargs=1, dest='composer', help='Composer of the song')
 parser.add_argument('-r', action='store_true', dest='comp_first', help='Composer and Title reversed in filename')
 parser.add_argument('-l', action='store_true', dest='list', help='List all tracks in midi-file')
 parser.add_argument('-v', action='store_true', dest='verbose', help='Include verbose information in output')
-parser.add_argument('-V', action='store_true', dest='voice_list', help='Select tracks as voice  for output e.g. -V 1,2,3 ')
-parser.add_argument('-D', action='store_true', dest='drum_list',  help='Select tracks as drums  for output e.g. -D 1,2,3 ')
-parser.add_argument('-P', action='store_true', dest='piano_list', help='Select tracks as piano  for output e.g. -P 1,2,3 ')
-parser.add_argument('-L', action='store_true', dest='lyrics_list',help='Select tracks as lyrics for output e.g. -P 1,2,3 ')
+parser.add_argument('-V', nargs=1, dest='voice_list', help='Select tracks as voice  for output e.g. -V 1,2,3 ')
+parser.add_argument('-D', nargs=1, dest='drum_list',  help='Select tracks as drums  for output e.g. -D 1,2,3 ')
+parser.add_argument('-P', nargs=1, dest='piano_list', help='Select tracks as piano  for output e.g. -P 1,2,3 ')
+parser.add_argument('-L', nargs=1, dest='lyrics_list',help='Select tracks as lyrics for output e.g. -L 1,2,3 ')
 parser.add_argument('midifile', help='Midifile to be processed')
 args = parser.parse_args()
 
 get_title_composer_from(args)
 if args.file is not None:
     sys.stdout = open(args.file[0], 'w')
+
+for ax in [args.voice_list,args.drum_list,args.piano_list,args.lyrics_list]:
+    if ax is not None:
+        oldlist = ax.copy()
+        ax.clear()
+        while len(oldlist) > 0:
+            ol = oldlist.pop()
+            ax += ol.split(',')
 
 midifile = args.midifile
 try:
