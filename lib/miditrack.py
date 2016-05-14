@@ -147,12 +147,12 @@ class MidiTrack(object):
         res = MidiTrack.resolution // 16
         for n in self.notes:
             dt = ((n.at_tick+res//2)//res)*res - n.at_tick
-            if dt > 0:
+            if dt != 0:
                 print('%% trim note %s by shifting %d ticks (res=%d)' % (n,dt,res))
                 n.at_tick  += dt
                 n.duration += dt
             dt = ((n.duration+res//2)//res)*res - n.duration
-            if dt > 0:
+            if dt != 0:
                 print('%% trim note %s by %d ticks (res=%d)' % (n,dt,res))
                 n.duration += dt
 
@@ -163,10 +163,10 @@ class MidiTrack(object):
             active.append(n)
             newnotes.append(n)
             active = [nx for nx in active if nx.at_tick+nx.duration > n.at_tick]
-            to_cut = [nx for nx in active if nx.at_tick != n.at_tick]
+            to_cut = [nx for nx in active if nx.at_tick <  n.at_tick]
             for nx in to_cut:
                 dt = n.at_tick-nx.at_tick-1
-                print('%% split note %s after %d ticks' % (n,dt))
+                print('%% split %s after %d ticks' % (nx,dt))
                 np = MidiNote(nx.track,nx.pitch,nx.velocity,nx.at_tick,dt,True)
                 newnotes.append(np)
                 nx.duration -= dt
@@ -175,12 +175,12 @@ class MidiTrack(object):
         while len(active) > 0:
             dt = min(n.duration for n in active)
             active = [n for n in active if n.duration > dt]
-            for n in to_cut:
+            for n in active:
                 np = MidiNote(n.track,n.pitch,n.velocity,n.at_tick,dt,True)
                 newnotes.append(np)
                 n.duration -= dt
                 n.at_tick  += dt
-                print('%% split note %s after %d ticks' % (n,dt))
+                print('%% split last %s after %d ticks' % (n,dt))
 
         self.notes = sorted(newnotes,key=lambda n:n.at_tick)
 
