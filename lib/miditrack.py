@@ -62,6 +62,7 @@ class MidiTrack(object):
                 bar_dict[bdata].append(i)
             else:
                 bar_dict[bdata] = [i]
+            print('%% BAR ',i,bdata)
         dups = [bar_dict[b] for b in bar_dict if len(bar_dict[b]) > 1]
 
         dup_dict = {}
@@ -81,7 +82,7 @@ class MidiTrack(object):
                 if ok:
                     candid.append([i+start for i in range(l)])
 
-        # Now evaluate all candidates
+        # Now evaluate all candidates.
         feasible = []
         for c in candid:
             # The first value in the list determines the skip values
@@ -99,15 +100,8 @@ class MidiTrack(object):
 
                     if ok:
                         for r in range(repeat,0,-1):
-                            feasible.append( (c,delta,delta-len(c),r) )
+                            feasible.append( (c,delta,delta-len(c),repeat) )
                         break
-
-        # Check for sequences > 2
-        for v in dup_dict:
-            d = dup_dict[v]
-            c = sorted([x for x in d if x >= v])
-            if len(c) > 2 and c[-1]-v == len(c)-1:
-                feasible.append( (c,1,0,len(c)) )
 
         feasible = sorted(feasible,key=lambda x:(x[1]-x[2])*x[3],reverse=True)
 
@@ -119,12 +113,13 @@ class MidiTrack(object):
         for i in range(len(feasible)):
             used = []
             reduced = 0
+            # First check for volta repeats, which cannot be nested
             for f in feasible[i:]:
                 c,delta,skip,repeat = f
                 #if skip <= delta//2 and delta >= 2:
                 start,end = c[0],c[0]+delta*(repeat+1)-1
                 ok = True
-                for cx,deltax,skipx,repeatx in used:
+                for cx,deltax,skipx,repeatx,typ in used:
                     startx,endx = cx[0],cx[0]+deltax*(repeatx+1)-1
                     if endx < start or startx > end:
                         continue
@@ -132,14 +127,32 @@ class MidiTrack(object):
                     break
                 if ok:
                     reduced += (delta-skip)*repeat
-                    used.append(f)
+                    used.append( (c,delta,skip,repeat,'volta') )
 
-            for f in used:
-                print('%% Used repeat xxx:',reduced,f)
+            # Then check for percent repeats, which can be nested in volta
+            for f in feasible[i:]:
+                c,delta,skip,repeat = f
+                #if skip <= delta//2 and delta >= 2:
+                start,end = c[0],c[0]+delta*(repeat+1)-1
+                ok = True
+                for cx,deltax,skipx,repeatx,typx in used:
+                    startx,inner_endx,endx = cx[0],cx[0]+delta*repeat-1-skip,cx[0]+deltax*(repeatx+1)-1
+                    if endx < start or startx > end:
+                        continue
+                    if typx == 'volta' and start > startx and end <= inner_endx:
+                        continue
+                    ok = False
+                    break
+                if ok:
+                    reduced += (delta-skip)*repeat
+                    used.append( (c,delta,skip,repeat,'percent') )
 
             if reduced > best_red:
                 best_red  = reduced
                 best_used = used
+
+        for f in best_used:
+            print('%% Used repeat xxx:',best_red,f)
 
         return best_used
 
@@ -161,7 +174,7 @@ class MidiTrack(object):
                                'repeated' : False} )
 
         for f in repeats:
-            c,delta,skip,repeat = f
+            c,delta,skip,repeat,typ = f
             if delta >= 2:
                 last_bar = min(c[0]+(1+repeat)*delta,max_bar)-1
 
