@@ -13,7 +13,7 @@ RUN mkdir -p /in
 WORKDIR /in
 
 COPY *.py /usr/src/app/
-COPY lib/*.py /usr/src/app/lib
+COPY lib/*.py /usr/src/app/lib/
 COPY python_midi/*.py /usr/src/app/python_midi/
 
 ENTRYPOINT [ "python", "/usr/src/app/midi2ly.py" ]
