@@ -12,16 +12,16 @@ def get_title_composer_from(args):
     global composer
     title    = 'Unknown Title'
     composer = 'Unknown Composer'
-    finfo = re.sub('\.[mM][iI][dD][iI]?','',args['midifile'])
-    if finfo != args['midifile']:
+    finfo = re.sub('\.[mM][iI][dD][iI]?','',args.midifile)
+    if finfo != args.midifile:
         finfo = re.split(' *- *',finfo)
         if len(finfo) == 2:
-            title    = finfo[1] if args['comp_first'] else finfo[0]
-            composer = finfo[0] if args['comp_first'] else finfo[1]
-    if args['title'] is not None:
-        title    = args['title'][0]
-    if args['composer'] is not None:
-        composer = args['composer'][0]
+            title    = finfo[1] if args.comp_first else finfo[0]
+            composer = finfo[0] if args.comp_first else finfo[1]
+    if args.title is not None:
+        title    = args.title[0]
+    if args.composer is not None:
+        composer = args.composer[0]
 
 parser = argparse.ArgumentParser(description= \
         'Tool to convert a midi-file (e.g. from Logic Pro/X) to lilypond format\n'+
@@ -33,18 +33,17 @@ parser.add_argument('-t', nargs=1, dest='title',    help='Title of the song')
 parser.add_argument('-c', nargs=1, dest='composer', help='Composer of the song')
 parser.add_argument('-r', action='store_true', dest='comp_first', help='Composer and Title reversed in filename')
 parser.add_argument('midifile', help='Midifile to be processed')
-args = vars(parser.parse_args())
-
-if args['file'] is not None:
-    sys.stdout = open(args['file'][0], 'w')
+args = parser.parse_args()
 
 get_title_composer_from(args)
+if args.file is not None:
+    sys.stdout = open(args.file[0], 'w')
 
-midifile = args['midifile']
+midifile = args.midifile
 try:
     pattern = midi.read_midifile(midifile)
 except TypeError as e:
-    print('Cannot read "%s" as midifile' % args['midifile'])
+    print('Cannot read "%s" as midifile' % args.midifile)
     print('Exception says: %s' % e)
     sys.exit(2)
 
