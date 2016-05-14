@@ -27,12 +27,26 @@ class MidiLyric(object):
                 % (self.text,self.track,self.at_tick)
 
 class MidiTrack(object):
+    tracklist  = []
     tracks     = {}
     ticks_set  = set()
     ticks      = []
+    bars       = []     # List of tuples (start tick,end tick)
     resolution = None   # Ticks per quarter note
 
-    def __new__(self,pattern):
+    @classmethod
+    def fill_bars(cls): # for now assume 4/4
+        max_tick = 0
+        for mtk in cls.tracks:
+            notes = cls.tracks[mtk].notes
+            if len(notes) > 0:
+                max_tick = max(max(n.at_tick+n.duration for n in notes),max_tick)
+        st = 0
+        while st < max_tick:
+            cls.bars.append( (st,st+4*cls.resolution-1) )
+            st += 4*cls.resolution
+
+    def __new__(self,pattern,verbose):
         trackname = None
         for e in pattern:
             if type(e) is midi.events.TrackNameEvent:
@@ -51,6 +65,7 @@ class MidiTrack(object):
 
         instance = super().__new__(MidiTrack)
 
+        instance.verbose       = verbose
         instance.key           = key
         instance.trackname     = trackname
         instance.instrument    = instrument
@@ -60,9 +75,10 @@ class MidiTrack(object):
         instance.notes_at      = {}
         instance.lyrics        = []
         MidiTrack.tracks[key]  = instance
+        MidiTrack.tracklist.append(instance)
         return instance
 
-    def __init__(self,pattern):
+    def __init__(self,pattern,verbose):
         # Be careful here, because self may be a reused instance
         # with same track and instrument name.
         # Reason:
@@ -78,11 +94,13 @@ class MidiTrack(object):
         # Logic Pro X seldom uses NoteOff but NoteOn with velocity zero instead
         transient = {}
         for e in pattern:
-            print('%% Event: ',e)
+            if verbose:
+                print('%% Event: ',e)
             if type(e) is midi.events.LyricsEvent:
                 lyr = MidiLyric(self,e.text,e.tick)
                 self.lyrics.append(lyr)
-                print('%% => ',lyr)
+                if verbose:
+                    print('%% => ',lyr)
 
             if type(e) is midi.events.NoteOnEvent and e.velocity > 0:
                 if e.pitch in transient:
@@ -104,7 +122,8 @@ class MidiTrack(object):
 
                 note = MidiNote(self,se.pitch,se.velocity,se.tick,e.tick-se.tick)
                 self.notes.append(note)
-                print('%% => ',note)
+                if verbose:
+                    print('%% => ',note)
         if len(transient) > 0:
             raise Exception('MIDI-File damaged: Stuck Notes detected')
 
@@ -152,5 +171,24 @@ class MidiTrack(object):
 
         self.notes = sorted(newnotes,key=lambda n:n.at_tick)
 
+    def split_notes_at_bar(self):
+        newnotes = []
+        while(len(self.notes)) > 0:
+            n = self.notes.pop(0)
+            newnotes.append(n)
+            for b in MidiTrack.bars:
+                if b[0] >= n.at_tick and b[1] > n.at_tick:
+                    if n.at_tick+n.duration-1 > b[1]:
+                        dt = n.at_tick + n.duration - (b[1] + 1)
+                        print('%% split note %s by %d ticks at bar %d-%d ticks' % (n,dt,b[0],b[1]))
+                        np = MidiNote(n.track,n.pitch,n.velocity,b[1],dt,False)
+                        self.notes.append(np)
+                        n.duration -= dt
+                    break
+        self.notes = sorted(newnotes,key=lambda n:n.at_tick)
+
     def __str__(self):
-        return 'Track(%s,%s)' % (self.trackname,self.instrument)
+        s = 'Track(%s,%s)' % (self.trackname,self.instrument)
+        if len(self.lyrics) > 0:
+            s += ' with %d lyric events' % len(self.lyrics)
+        return s

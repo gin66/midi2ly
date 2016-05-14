@@ -28,11 +28,18 @@ parser = argparse.ArgumentParser(description= \
         'Tool to convert a midi-file (e.g. from Logic Pro/X) to lilypond format\n'+
         'The midi-filename should be "<Title> - <Composer>.mid" or ".midi".\n'+
         'If title and composer are reversed, then use the -r switch.\n'+
-        'Otherwise provide title and composer via commandline switch (-t/-c).')
+        'Otherwise provide title and composer via commandline switch (-t/-c).\n'
+        'Output is defined by the -D/-P/-V/-L switches.')
 parser.add_argument('-o', nargs=1, dest='file',     help='Output processing result to file')
 parser.add_argument('-t', nargs=1, dest='title',    help='Title of the song')
 parser.add_argument('-c', nargs=1, dest='composer', help='Composer of the song')
 parser.add_argument('-r', action='store_true', dest='comp_first', help='Composer and Title reversed in filename')
+parser.add_argument('-l', action='store_true', dest='list', help='List all tracks in midi-file')
+parser.add_argument('-v', action='store_true', dest='verbose', help='Include verbose information in output')
+parser.add_argument('-V', action='store_true', dest='voice_list', help='Select tracks as voice  for output e.g. -V 1,2,3 ')
+parser.add_argument('-D', action='store_true', dest='drum_list',  help='Select tracks as drums  for output e.g. -D 1,2,3 ')
+parser.add_argument('-P', action='store_true', dest='piano_list', help='Select tracks as piano  for output e.g. -P 1,2,3 ')
+parser.add_argument('-L', action='store_true', dest='lyrics_list',help='Select tracks as lyrics for output e.g. -P 1,2,3 ')
 parser.add_argument('midifile', help='Midifile to be processed')
 args = parser.parse_args()
 
@@ -43,18 +50,32 @@ if args.file is not None:
 midifile = args.midifile
 try:
     pattern = midi.read_midifile(midifile)
-    MidiTrack.resolution = pattern.resolution
-    tracks  = []
-    for p in pattern:
-        mt = MidiTrack(p)
-        mt.trim_notes()
-        mt.split_same_time_notes_to_same_length()
-        tracks.append(mt)
-        print(mt)
 except TypeError as e:
     print('Cannot read "%s" as midifile' % args.midifile)
     print('Exception says: %s' % e)
     sys.exit(2)
+
+MidiTrack.resolution = pattern.resolution
+for p in pattern:
+    mt = MidiTrack(p,args.verbose)
+
+if args.list:
+    i = 0
+    for mt in MidiTrack.tracklist:
+        i += 1
+        print(i,mt)
+    sys.exit(0)
+
+for mt in MidiTrack.tracklist:
+    mt.trim_notes()
+    mt.split_same_time_notes_to_same_length()
+    print(mt)
+
+MidiTrack.fill_bars()
+print(MidiTrack.bars)
+print(len(MidiTrack.bars))
+for mt in MidiTrack.tracklist:
+    mt.split_notes_at_bar()
 
 sys.exit(0)
 
