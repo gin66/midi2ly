@@ -603,6 +603,12 @@ if len(drum_voices) > 0:
         drumstaff += '\\new DrumVoice {\\voice%s \\clef "percussion" %s \\%s}' % (x,time_sig,v)
     drumstaff += '>>'
 
+if len(song_voices) > 0:
+    songstaff  = '\\new Staff <<'
+    for v,x in zip(song_voices,['One','Two','Three','Four']):
+        songstaff += '\\new Voice {\\voice%s \\clef "treble" %s \\%s}' % (x,time_sig,v)
+    songstaff += '>>'
+
 
 print("""
 % The score definition
@@ -613,9 +619,9 @@ print("""
 """)
 #for v,x in zip(song_voices,['One','Two','Three','Four']):
 #    print('\\new Voice = "melody%s" { \\voice%s \\clef "bass" \\key %s %s \\%s}' % (x,x,key,time_sig,v))
+print(songstaff)
 print(pianostaff)
 print(drumstaff)
-print(songstaff)
 print("""
     >>
     \\layout {}
@@ -632,9 +638,9 @@ print("""
     \\unfoldRepeats
     <<
 """)
+print(songstaff)
 print(pianostaff)
 print(drumstaff)
-print(songstaff)
 print("""
     >>
     \\midi {

@@ -60,6 +60,7 @@ class MidiTrack(object):
                 break
 
         key = '%s_%s' % (trackname,instrument)
+        key = key.replace(' ','_')
         if key in MidiTrack.tracks:
             return MidiTrack.tracks[key]
 
