@@ -108,21 +108,6 @@ if False:
             if type(ev) is midi.events.TimeSignatureEvent:
                 time_sig = '\\numericTimeSignature\\time %d/%d' % (ev.numerator,ev.denominator)
 
-# Get deltas => BASED ON THIS SET THE CLOCKTICK VALUE !!!!
-    dticks = {}
-    for i in range(len(ticks)-1):
-        dt = ticks[i+1]-ticks[i]
-        if dt in dticks:
-            dticks[dt] += 1
-        else:
-            dticks[dt]  = 1
-    for dt in sorted([d for d in dticks]):
-        print('% ',dt,dticks[dt])
-
-    FULLTICK = 16*120.0
-    FULLBAR  = FULLTICK
-    print(('%% Full tick aka 4 fourth is set to %d' % FULLTICK))
-
 # Guess the key
     print('% Statistik:',stats)
     ref = {

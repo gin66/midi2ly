@@ -27,12 +27,13 @@ class MidiLyric(object):
                 % (self.text,self.track,self.at_tick)
 
 class MidiTrack(object):
-    tracklist  = []
-    tracks     = {}
-    ticks_set  = set()
-    ticks      = []
-    bars       = []     # List of tuples (start tick,end tick)
-    resolution = None   # Ticks per quarter note
+    tracklist      = []
+    tracks         = {}
+    ticks_set      = set()
+    ticks          = []
+    bars           = []     # List of tuples (start tick,end tick)
+    resolution     = None   # Ticks per quarter note
+    time_signature = {}
 
     @classmethod
     def fill_bars(cls): # for now assume 4/4
@@ -192,6 +193,15 @@ class MidiTrack(object):
                     for deco in bar_deco[c[0]+1:c[0]+repeat+1]:
                         deco['fmt'] = '%% SKIP: ' + deco['fmt']
                         deco['repeated'] = True
+
+        # Add time signatures
+        for tick in cls.time_signature:
+            for i in range(len(cls.bars)):
+                bs,be = cls.bars[i]
+                if bs <= tick and tick < be:
+                    deco = bar_deco[i]
+                    deco['pre'] = cls.time_signature[tick] + '\n' + deco['pre']
+                    break
         return bar_deco
 
     def __new__(self,pattern,verbose):
@@ -240,6 +250,13 @@ class MidiTrack(object):
         # Reason:
         #    Logic Pro X puts regions in a track into separate midi patterns
         pattern.make_ticks_abs()
+
+        # Get time signature from track
+        for e in pattern:
+            if type(e) is midi.events.TimeSignatureEvent:
+                s = '\\numericTimeSignature\\time %d/%d' \
+                            % (e.numerator,e.denominator)
+                MidiTrack.time_signature[e.tick] = s
 
         # Collect all ticks in class variable ticks for all tracks
         for e in pattern:
