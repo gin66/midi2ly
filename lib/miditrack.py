@@ -65,22 +65,23 @@ class MidiTrack(object):
 
         instance = super().__new__(MidiTrack)
 
-        instance.index         = len(MidiTrack.tracklist)+1
-        instance.verbose       = verbose
-        instance.key           = key
-        instance.trackname     = trackname
-        instance.instrument    = instrument
-        instance.notecount_128 = [0]*128
-        instance.notecount_12  = [0]*12
-        instance.notes         = []
-        instance.notes_at      = {}
-        instance.lyrics        = []
-        instance.output        = False
-        instance.output_piano  = False
-        instance.output_drums  = False
-        instance.output_voice  = False
-        instance.output_lyrics = False
-        MidiTrack.tracks[key]  = instance
+        instance.index          = len(MidiTrack.tracklist)+1
+        instance.verbose        = verbose
+        instance.key            = key
+        instance.trackname      = trackname
+        instance.instrument     = instrument
+        instance.notecount_128  = [0]*128
+        instance.notecount_12   = [0]*12
+        instance.notes          = []
+        instance.lyrics         = []
+        instance.output         = False
+        instance.output_piano   = False
+        instance.output_drums   = False
+        instance.output_voice   = False
+        instance.output_lyrics  = False
+        instance.bar_lily_notes = []
+        instance.bar_lily_words = []
+        MidiTrack.tracks[key]   = instance
         MidiTrack.tracklist.append(instance)
         return instance
 
@@ -182,16 +183,70 @@ class MidiTrack(object):
         while(len(self.notes)) > 0:
             n = self.notes.pop(0)
             newnotes.append(n)
-            for b in MidiTrack.bars:
-                if b[0] >= n.at_tick and b[1] > n.at_tick:
-                    if n.at_tick+n.duration-1 > b[1]:
-                        dt = n.at_tick + n.duration - (b[1] + 1)
-                        print('%% split note %s by %d ticks at bar %d-%d ticks' % (n,dt,b[0],b[1]))
-                        np = MidiNote(n.track,n.pitch,n.velocity,b[1],dt,False)
+            for bs,be in MidiTrack.bars:
+                if bs <= n.at_tick and be > n.at_tick:
+                    if n.at_tick+n.duration-1 > be:
+                        dt = n.at_tick + n.duration - (be + 1)
+                        print('%% split note %s by %d ticks at bar %d-%d ticks' % (n,dt,bs,be))
+                        np = MidiNote(n.track,n.pitch,n.velocity,be,dt,False)
                         self.notes.append(np)
                         n.duration -= dt
                     break
         self.notes = sorted(newnotes,key=lambda n:n.at_tick)
+
+    def convert_notes_to_bars_as_lilypond(self):
+        if not self.output:
+            return
+        for n in self.notes:
+            if self.output_piano or self.output_voice:
+                n.lily = lilypond.NOTE[n.pitch]
+            elif self.output_drums:
+                n.lily = lilypond.PERC[n.pitch]
+
+        if self.output_drums or self.output_voice or self.output_piano:
+            for bs,be in MidiTrack.bars:
+                bar = [n for n in self.notes if bs <= n.at_tick and be > n.at_tick]
+                print('%% Convert bar to lilypond (%d-%d) ticks' % (bs,be))
+                for n in bar:
+                    print('%%      ',n)
+                l = self.__to_lily__(bar,bs,be)
+                self.bar_lily_notes.append(l)
+                print('%%  -> ',l)
+
+    def __to_lily__(self,bar,bs,be):
+        l = []
+        tick = bs
+        while tick <= be:
+            notes     = [n for n in bar if n.at_tick >= tick]
+            if len(notes) == 0:
+                dt = be+1 - tick
+            else:
+                next_tick = min(n.at_tick for n in notes)
+                notes     = [n for n in bar if n.at_tick == next_tick]
+                dt = next_tick - tick
+
+            if dt > 0:  # need pause
+                dur,dt = lilypond.select_duration(tick,be+1,dt,MidiTrack.resolution*4)
+                ls = 'r'
+            elif len(notes) > 0:
+                dt = notes[0].duration
+                dur,dt = lilypond.select_duration(tick,be+1,dt,MidiTrack.resolution*4)
+                ls = []
+                if len(notes) > 1:
+                    ls.append('<')
+                for n in notes:
+                    ls.append(n.lily)
+                if len(notes) > 1:
+                    ls.append('>')
+                ls = ' '.join(ls)
+
+            tick += dt
+            for d in dur:
+                l.append(ls + d)
+
+        if tick-be != 1:
+            raise Exception('Internal Error %d != %d + 1' % (tick,be))
+        return ' '.join(l)
 
     def __str__(self):
         s = 'Track(%s,%s)' % (self.trackname,self.instrument)
