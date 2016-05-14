@@ -102,9 +102,11 @@ def calculate(tracks):
         fifo.append(n)
         note = n.pitch % 12
         for i in range(len(ref)):
-            stats[i] += ref[keys[i]][note]*2-1
+            stats[i] += ref[keys[i]][note]-1
         sm = max(stats)
-        if stats.count(sm) == 1 and stats.count(sm-1) == 0 and stats.count(sm-2) == 0:
+        #if stats.count(sm) == 1 and stats.count(sm-1) == 0 and stats.count(sm-2) == 0:
+        if stats.count(sm) == 1 and stats.count(sm-1) == 0:
+        #if stats.count(sm) == 1:
             key = keys[stats.index(sm)]
             if len(key_ticks) == 0:
                 key_ticks.append( [0,n.at_tick,key,stats.copy()] )
@@ -117,7 +119,7 @@ def calculate(tracks):
                 n = fifo.pop(0)
                 note = n.pitch % 12
                 for i in range(len(ref)):
-                    stats[i] -= ref[keys[i]][note]*2-1
+                    stats[i] -= ref[keys[i]][note]-1
                 sm = max(stats)
     return(key_ticks)
 
