@@ -43,9 +43,12 @@ if args.file is not None:
 midifile = args.midifile
 try:
     pattern = midi.read_midifile(midifile)
+    MidiTrack.resolution = pattern.resolution
     tracks  = []
     for p in pattern:
         mt = MidiTrack(p)
+        mt.trim_notes()
+        mt.split_same_time_notes_to_same_length()
         tracks.append(mt)
         print(mt)
 except TypeError as e:

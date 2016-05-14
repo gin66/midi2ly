@@ -2,17 +2,19 @@ import python_midi   as midi
 import lib.lilypond  as lilypond
 
 class MidiNote(object):
-    def __init__(self,track,pitch,velocity,at_tick,duration):
+    def __init__(self,track,pitch,velocity,at_tick,duration,extended=False):
         self.note     = midi.constants.NOTE_VALUE_MAP_FLAT[pitch]
         self.track    = track
         self.pitch    = pitch
         self.velocity = velocity
         self.at_tick  = at_tick
         self.duration = duration
+        self.extended = extended      # is True, if has following note
 
     def __str__(self):
         return 'Note(%s:%d,%d,%d ticks) in %s at %d' \
-                % (self.note,self.pitch,self.velocity,self.duration,self.track,self.at_tick)
+                % (self.note,self.pitch,self.velocity,\
+                   self.duration,self.track,self.at_tick)
 
 class MidiLyric(object):
     def __init__(self,track,text,at_tick):
@@ -25,9 +27,10 @@ class MidiLyric(object):
                 % (self.text,self.track,self.at_tick)
 
 class MidiTrack(object):
-    tracks = {}
-    ticks_set = set()
-    ticks     = []
+    tracks     = {}
+    ticks_set  = set()
+    ticks      = []
+    resolution = None   # Ticks per quarter note
 
     def __new__(self,pattern):
         trackname = None
@@ -54,6 +57,7 @@ class MidiTrack(object):
         instance.notecount_128 = [0]*128
         instance.notecount_12  = [0]*12
         instance.notes         = []
+        instance.notes_at      = {}
         instance.lyrics        = []
         MidiTrack.tracks[key]  = instance
         return instance
@@ -70,11 +74,11 @@ class MidiTrack(object):
             if type(e) is midi.events.NoteOnEvent and e.velocity > 0:
                 MidiTrack.ticks_set.add(e.tick)
         MidiTrack.ticks=sorted(list(MidiTrack.ticks_set))
-        print(len(MidiTrack.ticks))
 
         # Logic Pro X seldom uses NoteOff but NoteOn with velocity zero instead
         transient = {}
         for e in pattern:
+            print('%% Event: ',e)
             if type(e) is midi.events.LyricsEvent:
                 lyr = MidiLyric(self,e.text,e.tick)
                 self.lyrics.append(lyr)
@@ -103,6 +107,50 @@ class MidiTrack(object):
                 print('%% => ',note)
         if len(transient) > 0:
             raise Exception('MIDI-File damaged: Stuck Notes detected')
+
+        self.notes = sorted(self.notes,key=lambda n:n.at_tick)
+
+    def trim_notes(self):
+        # Trim notes on 1/64 note
+        res = MidiTrack.resolution // 16
+        for n in self.notes:
+            dt = ((n.at_tick+res//2)//res)*res - n.at_tick
+            if dt > 0:
+                print('%% trim note %s by shifting %d ticks (res=%d)' % (n,dt,res))
+                n.at_tick  += dt
+                n.duration += dt
+            dt = ((n.duration+res//2)//res)*res - n.duration
+            if dt > 0:
+                print('%% trim note %s by %d ticks (res=%d)' % (n,dt,res))
+                n.duration += dt
+
+    def split_same_time_notes_to_same_length(self):
+        active   = []
+        newnotes = []
+        for n in self.notes:
+            active.append(n)
+            newnotes.append(n)
+            active = [nx for nx in active if nx.at_tick+nx.duration > n.at_tick]
+            to_cut = [nx for nx in active if nx.at_tick != n.at_tick]
+            for nx in to_cut:
+                dt = n.at_tick-nx.at_tick-1
+                print('%% split note %s after %d ticks' % (n,dt))
+                np = MidiNote(nx.track,nx.pitch,nx.velocity,nx.at_tick,dt,True)
+                newnotes.append(np)
+                nx.duration -= dt
+                nx.at_tick   = n.at_tick
+
+        while len(active) > 0:
+            dt = min(n.duration for n in active)
+            active = [n for n in active if n.duration > dt]
+            for n in to_cut:
+                np = MidiNote(n.track,n.pitch,n.velocity,n.at_tick,dt,True)
+                newnotes.append(np)
+                n.duration -= dt
+                n.at_tick  += dt
+                print('%% split note %s after %d ticks' % (n,dt))
+
+        self.notes = sorted(newnotes,key=lambda n:n.at_tick)
 
     def __str__(self):
         return 'Track(%s,%s)' % (self.trackname,self.instrument)
