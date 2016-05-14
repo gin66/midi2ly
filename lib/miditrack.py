@@ -48,13 +48,17 @@ class MidiTrack(object):
             st += 4*cls.resolution
 
     @classmethod
-    def get_bar_decorators_with_repeat(cls):
+    def get_bar_decorators_with_repeat(cls,key_list):
         bar_deco = []
         for i in range(len(MidiTrack.bars)):
             bar_deco.append( { 'info'     :'orig',
                                'pre'      : '',
-                               'fmt'      : '%(pre)s %(bar)s %(post)s  %% %(info)s',
+                               'fmt_voice': '%(bol)s %(key)s %(timesig)s %(pre)s %(bar)s %(post)s  %% %(info)s',
+                               'fmt_drum' : '%(bol)s %(timesig)s %(pre)s %(bar)s %(post)s  %% %(info)s',
                                'post'     : ' |',
+                               'key'      : '',
+                               'timesig'  : '',
+                               'bol'      : '',
                                'repeated' : False} )
 
         # join all lilypond representation of all bars together
@@ -172,7 +176,7 @@ class MidiTrack(object):
                     # Blank all repeated bars
                     for r in range(2,repeat+2):
                         for deco in bar_deco[c[0]+(r-1)*delta : min(c[0]+r*delta-skip-1,last_bar)+1]:
-                            deco['fmt'] = '%% SKIP ' + deco['fmt']
+                            deco['bol'] = '%% SKIP: '
                     if skip > 0:
                         bar_deco[min(c[0]+(repeat+1)*delta-1,last_bar)]['post'] = '}} |'
 
@@ -191,7 +195,7 @@ class MidiTrack(object):
                     deco['post']     = '}|'
                     deco['repeated'] = True
                     for deco in bar_deco[c[0]+1:c[0]+repeat+1]:
-                        deco['fmt'] = '%% SKIP: ' + deco['fmt']
+                        deco['bol'] = '%% SKIP: '
                         deco['repeated'] = True
 
         # Add time signatures
@@ -200,8 +204,18 @@ class MidiTrack(object):
                 bs,be = cls.bars[i]
                 if bs <= tick and tick < be:
                     deco = bar_deco[i]
-                    deco['pre'] = cls.time_signature[tick] + '\n' + deco['pre']
+                    deco['timesig'] = cls.time_signature[tick] + '\n'
                     break
+
+        # Tuples with (starttick,endtick,key,stats)
+        for stick,etick,key,stats in key_list:
+            for i in range(len(cls.bars)):
+                bs,be = cls.bars[i]
+                if bs <= tick and tick < be:
+                    deco = bar_deco[i]
+                    deco['key'] = '\\key ' + key.lower() + '\n'
+                    break
+
         return bar_deco
 
     def __new__(self,pattern,verbose):

@@ -80,7 +80,7 @@ def calculate_scales():
         ref[major] = curr + [minor,sharp-flat]
         curr.insert(0,curr.pop())   # Rotate one half-tone
 
-def calculate(p):
+def calculate(tracks):
     global ref
 
     # Guess the key
@@ -90,30 +90,35 @@ def calculate(p):
 
     key_ticks = []
 
+    notes = []
+    for mt in tracks:
+        notes += mt.notes
+    notes = sorted(notes,key=lambda n:n.at_tick)
+
     fifo = []
-    for ev in p:
-        if type(ev) is midi.events.NoteOnEvent and ev.data[1] > 0:
-            fifo.append(ev)
-            note = ev.data[0] % 12
-            for i in range(len(ref)):
-                stats[i] += ref[keys[i]][note]
-            sm = max(stats)
-            if stats.count(sm) == 1:
-                key = keys[stats.index(sm)]
-                if len(key_ticks) == 0:
-                    key_ticks.append( [0,ev.tick,key] )
-                elif key_ticks[-1][2] == key:
-                    key_ticks[-1][1] = ev.tick
-                else:
-                    key_ticks.append( [fifo[0].tick,ev.tick,key] )
+    for n in notes:
+        if len(key_ticks) > 0:
+            key_ticks[-1][1] = n.at_tick+n.duration
+        fifo.append(n)
+        note = n.pitch % 12
+        for i in range(len(ref)):
+            stats[i] += ref[keys[i]][note]*2-1
+        sm = max(stats)
+        if stats.count(sm) == 1 and stats.count(sm-1) == 0 and stats.count(sm-2) == 0:
+            key = keys[stats.index(sm)]
+            if len(key_ticks) == 0:
+                key_ticks.append( [0,n.at_tick,key,stats.copy()] )
+            elif key_ticks[-1][2] == key:
+                key_ticks[-1][1] = n.at_tick
+            else:
+                key_ticks.append( [fifo[0].at_tick,n.at_tick,key,stats.copy()] )
 
-                while stats.count(sm) == 1:
-                    ev = fifo.pop(0)
-                    note = ev.data[0] % 12
-                    for i in range(len(ref)):
-                        stats[i] -= ref[keys[i]][note]
-                    sm = max(stats)
-
+            while stats.count(sm) == 1:
+                n = fifo.pop(0)
+                note = n.pitch % 12
+                for i in range(len(ref)):
+                    stats[i] -= ref[keys[i]][note]*2-1
+                sm = max(stats)
     return(key_ticks)
 
 calculate_scales()

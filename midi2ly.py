@@ -72,6 +72,10 @@ if args.list:
         print(mt.index,':',mt)
     sys.exit(0)
 
+lpiano_voices = []
+rpiano_voices = []
+drum_voices   = []
+song_voices   = []
 for mt in MidiTrack.tracklist:
     n = '%d' % mt.index
     if n in args.drum_list:
@@ -95,44 +99,17 @@ print('%% ',len(MidiTrack.bars))
 for mt in MidiTrack.tracklist:
     mt.split_notes_at_bar()
 
+key_tracks = [ mt for mt in MidiTrack.tracklist if mt.output_piano or mt.output_voice]
+# Tuples with (starttick,endtick,key,stats)
+key_list = key_guess.calculate(key_tracks)
+print('%% KEYS: ',key_list)
+
 for mt in MidiTrack.tracklist:
     mt.convert_notes_to_bars_as_lilypond()
 
-bar_deco = MidiTrack.get_bar_decorators_with_repeat()
+bar_deco = MidiTrack.get_bar_decorators_with_repeat(key_list)
 
 if False:
-    time_sig =''
-    def parse_meta_track(p):
-        for ev in p:
-            print('% meta:',ev)
-            if type(ev) is midi.events.TimeSignatureEvent:
-                time_sig = '\\numericTimeSignature\\time %d/%d' % (ev.numerator,ev.denominator)
-
-# Guess the key
-    print('% Statistik:',stats)
-    ref = {
-            'c \\major': [1,0,1,0,1,1,0,1,0,1,0,1],
-            'g \\major': [1,0,1,0,1,0,1,1,0,1,0,1],
-            'd \\major': [0,1,1,0,1,0,1,1,0,1,0,1],
-            'a \\major': [0,1,1,0,1,0,1,0,1,1,0,1],
-            'e \\major': [0,1,0,1,1,0,1,0,1,1,0,1],
-            'h \\major': [0,1,0,1,1,0,1,0,1,0,1,1],
-
-            'f \\major': [1,0,1,0,1,1,0,1,0,1,1,0],
-            'b \\major': [1,0,1,1,0,1,0,1,0,1,1,0],
-            'c \\minor': [1,0,1,1,0,1,0,1,1,0,1,0],
-            'f \\minor': [1,1,0,1,0,1,0,1,1,0,1,0],
-            'b \\minor': [1,1,0,1,0,1,1,0,1,0,1,0]
-        }
-    rmax = [None,None]
-    for r in ref:
-        s = sum(h*(f-0.5) for h,f in zip(stats,ref[r]))
-        print('%% %s %.2f' % (r,s))
-        if rmax[0] is None or rmax[0] < s:
-            rmax = [s,r]
-    key = rmax[1]
-    print('%% -> Selected:',key)
-
     del_silence = True
     while del_silence:
         for k in all_lily:
@@ -151,10 +128,6 @@ print('  title = "%s"' % title)
 print('  composer = "%s"' % composer)
 print('}')
 
-lpiano_voices = []
-rpiano_voices = []
-drum_voices   = []
-song_voices   = []
 
 for mt in MidiTrack.tracklist:
     if mt.output:
@@ -171,30 +144,9 @@ for mt in MidiTrack.tracklist:
         print(mt.key,'= ' + mode + '{')
         for deco,bar in zip(bar_deco,mt.bar_lily_notes):
             deco['bar'] = bar
-            print(deco['fmt'] % deco)
+            fmt = 'fmt_drum' if mt.output_drums else 'fmt_voice'
+            print(deco[fmt] % deco)
         print('}')
-
-if False:
-    for k in voices:
-        if track_type[k] == 'drums':
-            print(k,'= \\drummode {')
-        else:
-            print(k,'= {')
-        for deco,bar in zip(bar_deco,bars[k]):
-            deco['bar'] = bar
-            print(deco['fmt'] % deco)
-        print('}')
-
-    while len(voices) > 0:
-        k = voices.pop()
-        if track_type[k] == 'piano left':
-            lpiano_voices.append(k)
-        elif track_type[k] == 'piano right':
-            rpiano_voices.append(k)
-        elif track_type[k] == 'drums':
-            drum_voices.append(k)
-        else:
-            song_voices.append(k)
 
 print('%% Piano links =',lpiano_voices)
 print('%% Piano rechts=',rpiano_voices)
@@ -205,28 +157,27 @@ pianostaff = ''
 drumstaff  = ''
 songstaff  = ''
 
-key = 'c \\major'
-time_sig = ''
+key = '\\key c \\major'
 if len(lpiano_voices) > 0 or len(rpiano_voices) > 0:
     pianostaff  = '\\new PianoStaff << \\context Staff = "1" << '
     pianostaff += '\\set PianoStaff.instrumentName = #"Piano"'
     for v,x in zip(rpiano_voices,['One','Two','Three','Four']):
-        pianostaff += '\\context Voice = "RPiano%s" { \\voice%s \\clef "treble" \\key %s %s \\%s}' % (x,x,key,time_sig,v)
+        pianostaff += '\\context Voice = "RPiano%s" { \\voice%s \\clef "treble" \\%s}' % (x,x,v)
     pianostaff += '>> \\context Staff = "2" <<'
     for v,x in zip(lpiano_voices,['One','Two','Three','Four']):
-        pianostaff += '\\context Voice = "LPiano%s" { \\voice%s \\clef "bass" \\key %s %s \\%s}' % (x,x,key,time_sig,v)
+        pianostaff += '\\context Voice = "LPiano%s" { \\voice%s \\clef "bass" \\%s}' % (x,x,v)
     pianostaff += '>> >>'
 
 if len(drum_voices) > 0:
     drumstaff  = '\\new DrumStaff <<'
     for v,x in zip(drum_voices,['One','Two','Three','Four']):
-        drumstaff += '\\new DrumVoice {\\voice%s \\clef "percussion" %s \\%s}' % (x,time_sig,v)
+        drumstaff += '\\new DrumVoice {\\voice%s \\clef "percussion" \\%s}' % (x,v)
     drumstaff += '>>'
 
 if len(song_voices) > 0:
     songstaff  = '\\new Staff <<'
     for v,x in zip(song_voices,['One','Two','Three','Four']):
-        songstaff += '\\new Voice {\\voice%s \\clef "treble" %s \\%s}' % (x,time_sig,v)
+        songstaff += '\\new Voice {\\voice%s \\clef "treble" \\%s}' % (x,v)
     songstaff += '>>'
 
 
