@@ -373,9 +373,10 @@ class MidiTrack(object):
                     if n.at_tick+n.duration-1 > be:
                         dt = n.at_tick + n.duration - (be + 1)
                         print('%% split note %s by %d ticks at bar %d-%d ticks' % (n,dt,bs,be))
-                        np = MidiNote(n.track,n.pitch,n.velocity,be,dt,False)
+                        np = MidiNote(n.track,n.pitch,n.velocity,be+1,dt,False)
                         self.notes.append(np)
                         n.duration -= dt
+                        n.extended = True
                     break
         self.notes = sorted(newnotes,key=lambda n:n.at_tick)
 
@@ -410,10 +411,14 @@ class MidiTrack(object):
                 notes     = [n for n in bar if n.at_tick == next_tick]
                 dt = next_tick - tick
 
+            intmed   = ''
+            extended = ''
             if dt > 0:  # need pause
                 dur,dt = lilypond.select_duration(tick,be+1,dt,MidiTrack.resolution*4)
                 ls = 'r'
             elif len(notes) > 0:
+                intmed   = '~'
+                extended = ''
                 dt = notes[0].duration
                 dur,dt = lilypond.select_duration(tick,be+1,dt,MidiTrack.resolution*4)
                 ls = []
@@ -421,13 +426,14 @@ class MidiTrack(object):
                     ls.append('<')
                 for n in notes:
                     ls.append(n.lily)
+                    if n.extended:
+                        extended = '~'
                 if len(notes) > 1:
                     ls.append('>')
                 ls = ' '.join(ls)
 
             tick += dt
-            for d in dur:
-                l.append(ls + d)
+            l.append(intmed.join(ls+d for d in dur)+extended)
 
         if tick-be != 1:
             raise Exception('Internal Error %d != %d + 1' % (tick,be))
