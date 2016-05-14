@@ -136,6 +136,11 @@ class MidiTrack(object):
 
         self.notes = sorted(self.notes,key=lambda n:n.at_tick)
 
+    def advise_treble(self): # useful for piano to select bass or treble
+        s_bass   = sum(self.notecount_128[:60])
+        s_treble = sum(self.notecount_128[60:])
+        return s_bass < s_treble
+
     def trim_notes(self):
         # Trim notes on 1/64 note
         res = MidiTrack.resolution // 16

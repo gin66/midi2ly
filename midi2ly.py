@@ -541,7 +541,10 @@ for mt in MidiTrack.tracklist:
         if mt.output_drums:
             drum_voices.append(mt.key)
         if mt.output_piano:
-            lpiano_voices.append(mt.key)
+            if mt.advise_treble():
+                rpiano_voices.append(mt.key)
+            else:
+                lpiano_voices.append(mt.key)
         if mt.output_voice:
             song_voices.append(mt.key)
         mode = '\\drummode' if mt.output_drums else ''
