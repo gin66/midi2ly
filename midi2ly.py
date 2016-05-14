@@ -5,7 +5,7 @@ import argparse
 import re
 import python_midi   as midi
 import lib.lilypond  as lilypond
-import lib.key_guess as lilypond
+import lib.key_guess as key_guess
 
 def get_title_composer_from(args):
     global title
@@ -68,10 +68,6 @@ def parse_meta_track(p):
         if type(ev) is midi.events.TimeSignatureEvent:
             time_sig = '\\numericTimeSignature\\time %d/%d' % (ev.numerator,ev.denominator)
 
-LILY_NOTE = lilypond.NOTE
-LILY_PERC = lilypond.PERC
-select_duration = lilypond.select_duration
-
 for p in pattern:
     p.make_ticks_abs()
 
@@ -117,10 +113,10 @@ for p in pattern:
     print('%% KEYS',k,":",keys[k])
 
     if 'Bluebird' in k:
-        CONV = LILY_PERC
+        CONV = lilypond.PERC
         track_type[k] = 'drums'
     else:
-        CONV = LILY_NOTE
+        CONV = lilypond.NOTE
         if 'L' in instrument:
             track_type[k] = 'piano left'
         elif 'R' in instrument:
@@ -281,9 +277,9 @@ for k in all_lily:
         if cur_tick < tick:
             #print('Rest',tick,cur_tick,next_bar)
             if next_bar <= tick:
-                v,dt = select_duration(cur_tick,next_bar,next_bar-cur_tick,FULLBAR)
+                v,dt = lilypond.select_duration(cur_tick,next_bar,next_bar-cur_tick,FULLBAR)
             else:
-                v,dt = select_duration(cur_tick,next_bar,tick - cur_tick,FULLBAR)
+                v,dt = lilypond.select_duration(cur_tick,next_bar,tick - cur_tick,FULLBAR)
 
             cur_tick += dt
             for vx in v:
@@ -296,7 +292,7 @@ for k in all_lily:
             dt = min(n[1],n[1]+tick-cur_tick)
             if dt < 0:
                 continue
-            v,dt = select_duration(cur_tick,next_bar,dt,FULLBAR)
+            v,dt = lilypond.select_duration(cur_tick,next_bar,dt,FULLBAR)
 
             s = []
             for n in ns:
@@ -324,7 +320,7 @@ for k in all_lily:
 
     if cur_tick < next_bar:
         dt = next_bar - cur_tick
-        v,dt = select_duration(cur_tick,next_bar,dt,FULLBAR)
+        v,dt = lilypond.select_duration(cur_tick,next_bar,dt,FULLBAR)
         for vx in v:
             cbar.append('r' + vx)
         cur_tick += dt
