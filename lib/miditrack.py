@@ -204,16 +204,16 @@ class MidiTrack(object):
                 bs,be = cls.bars[i]
                 if bs <= tick and tick < be:
                     deco = bar_deco[i]
-                    deco['timesig'] = cls.time_signature[tick] + '\n'
+                    deco['timesig'] = cls.time_signature[tick]
                     break
 
         # Tuples with (starttick,endtick,key,stats)
         for stick,etick,key,stats in key_list:
             for i in range(len(cls.bars)):
                 bs,be = cls.bars[i]
-                if bs <= tick and tick < be:
+                if bs <= stick and stick < be:
                     deco = bar_deco[i]
-                    deco['key'] = '\\key ' + key.lower() + '\n'
+                    deco['key'] = '\\key ' + key.lower()
                     break
 
         return bar_deco
