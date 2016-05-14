@@ -3,8 +3,9 @@ import sys
 sys.path.append('python_midi')
 import argparse
 import re
-import python_midi as midi
-import key_guess
+import python_midi   as midi
+import lib.lilypond  as lilypond
+import lib.key_guess as lilypond
 
 def get_title_composer_from(args):
     global title
@@ -40,12 +41,17 @@ if args['file'] is not None:
 get_title_composer_from(args)
 
 midifile = args['midifile']
-pattern = midi.read_midifile(midifile)
+try:
+    pattern = midi.read_midifile(midifile)
+except TypeError as e:
+    print('Cannot read "%s" as midifile' % args['midifile'])
+    print('Exception says: %s' % e)
+    sys.exit(2)
 
 # Logic Pro X
 # - uses first track for metadata
 # - each region is coded as a separate track
-# - seldom uses NoteOff but NoteOn with velocity zero
+# - seldom uses NoteOff but NoteOn with velocity zero instead
 # - First two events are TrackNameEvent and InstrumentNameEvent
 
 def get_track_instrument(p):
@@ -62,65 +68,9 @@ def parse_meta_track(p):
         if type(ev) is midi.events.TimeSignatureEvent:
             time_sig = '\\numericTimeSignature\\time %d/%d' % (ev.numerator,ev.denominator)
 
-LILY_NOTE = []
-for x in [",,,,",",,,",",,",",","","'","''","'''"]:
-    for c in ['c','cis','d','dis','e','f','fis','g','gis','a','ais','b']:
-        LILY_NOTE.append(c+x)
-
-LILY_PERC = {
-        36:'bd',
-        42:'hh',
-        40:'sn',
-        28:'cymra',
-        49:'cymca'
-        }
-
-print('%',LILY_NOTE)
-durations = [
-        None,
-        ['32'],
-        ['16'],
-        ['16.'],
-        ['8'],
-        ['8','32'],
-        ['8.'],
-        ['8','16.'],
-        ['4'],
-        ['4','32'],
-        ['4','16'],
-        ['4','16.'],
-        ['4.'],
-        ['4','8','32'],
-        ['4','8','16'],
-        ['4','8','16.'],
-        ['2'],
-        ['2','32'],
-        ['2','16'],
-        ['2','16.'],
-        ['2','8'],
-        ['2','8','32'],
-        ['2','8','16'],
-        ['2','8','16.'],
-        ['2','4'],
-        ['2','4','32'],
-        ['2','4','16'],
-        ['2','4','16.'],
-        ['2','4','8'],
-        ['2','4','8','32'],
-        ['2','4','8','16'],
-        ['2','4','8','16.'],
-        ['1']
-    ]
-def select_duration(tick,nextbar,dt):
-    if dt < 0:
-        print('negative dt',dt)
-        raise
-    v32 = int(round(16.0*dt/FULLTICK))*2
-    if v32 == 0:
-        v32 = 2
-    res = durations[v32],FULLTICK//32 * v32
-    print('%% select_duration(',tick,',',nextbar,',',dt,')=',res)
-    return res
+LILY_NOTE = lilypond.NOTE
+LILY_PERC = lilypond.PERC
+select_duration = lilypond.select_duration
 
 for p in pattern:
     p.make_ticks_abs()
@@ -331,9 +281,9 @@ for k in all_lily:
         if cur_tick < tick:
             #print('Rest',tick,cur_tick,next_bar)
             if next_bar <= tick:
-                v,dt = select_duration(cur_tick,next_bar,next_bar-cur_tick)
+                v,dt = select_duration(cur_tick,next_bar,next_bar-cur_tick,FULLBAR)
             else:
-                v,dt = select_duration(cur_tick,next_bar,tick - cur_tick)
+                v,dt = select_duration(cur_tick,next_bar,tick - cur_tick,FULLBAR)
 
             cur_tick += dt
             for vx in v:
@@ -346,7 +296,7 @@ for k in all_lily:
             dt = min(n[1],n[1]+tick-cur_tick)
             if dt < 0:
                 continue
-            v,dt = select_duration(cur_tick,next_bar,dt)
+            v,dt = select_duration(cur_tick,next_bar,dt,FULLBAR)
 
             s = []
             for n in ns:
@@ -374,7 +324,7 @@ for k in all_lily:
 
     if cur_tick < next_bar:
         dt = next_bar - cur_tick
-        v,dt = select_duration(cur_tick,next_bar,dt)
+        v,dt = select_duration(cur_tick,next_bar,dt,FULLBAR)
         for vx in v:
             cbar.append('r' + vx)
         cur_tick += dt
