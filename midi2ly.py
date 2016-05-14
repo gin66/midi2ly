@@ -68,13 +68,24 @@ for p in pattern:
     mt = MidiTrack(p,args.verbose)
 
 if args.list:
-    i = 0
     for mt in MidiTrack.tracklist:
-        i += 1
-        print(i,mt)
+        print(mt.index,':',mt)
     sys.exit(0)
 
 for mt in MidiTrack.tracklist:
+    n = '%d' % mt.index
+    if n in args.drum_list:
+        mt.output        = True
+        mt.output_drums  = True
+    if n in args.voice_list:
+        mt.output        = True
+        mt.output_voice  = True
+    if n in args.piano_list:
+        mt.output        = True
+        mt.output_piano  = True
+    if n in args.lyrics_list:
+        mt.output        = True
+        mt.output_lyrics = True
     mt.trim_notes()
     mt.split_same_time_notes_to_same_length()
     print(mt)

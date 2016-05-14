@@ -65,6 +65,7 @@ class MidiTrack(object):
 
         instance = super().__new__(MidiTrack)
 
+        instance.index         = len(MidiTrack.tracklist)+1
         instance.verbose       = verbose
         instance.key           = key
         instance.trackname     = trackname
@@ -74,6 +75,11 @@ class MidiTrack(object):
         instance.notes         = []
         instance.notes_at      = {}
         instance.lyrics        = []
+        instance.output        = False
+        instance.output_piano  = False
+        instance.output_drums  = False
+        instance.output_voice  = False
+        instance.output_lyrics = False
         MidiTrack.tracks[key]  = instance
         MidiTrack.tracklist.append(instance)
         return instance
