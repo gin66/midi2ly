@@ -108,6 +108,10 @@ class MidiTrack(object):
                             feasible.append( (c,delta,delta-len(c),repeat) )
                         break
 
+        # Filter out those, which do not make too much sense
+        feasible = [f for f in feasible if f[1]-f[2] > f[2]//3 ]
+
+        # then sort them
         feasible = sorted(feasible,key=lambda x:(x[1]-x[2])*x[3],reverse=True)
 
         for c in feasible:
