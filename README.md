@@ -35,10 +35,11 @@ The embedded tracks can be listed with:
     ./midi2ly.py -l Randy\ Newman\ -\ When\ I\ am\ Gone.mid >RN.ly
 
 And the output is:
-1 : Track(None,None)
-2 : Track(Voice,Orchestra Oboe) with 184 lyric events
-3 : Track(Intro,R)
-4 : Track(Intro,L)
+
+    1 : Track(None,None)
+    2 : Track(Voice,Orchestra Oboe) with 184 lyric events
+    3 : Track(Intro,R)
+    4 : Track(Intro,L)
 
 The first track is the meta track. For print out of the piano score with embedded lyrics the invocation would be:
 
@@ -49,8 +50,10 @@ And then for type setting + midi output with repeats expanded just do:
     lilypond RN.ly
 
 In case you lack python v3. Then you can create a docker container with:
+
     docker build -t pymidi .
 
 And then run it with
+
     docker run -it --rm -v "`pwd`":/in pymidi -L 2 -P 3,4 Randy\ Newman\ -\ When\ I\ am\ Gone.mid >RN.ly
 
