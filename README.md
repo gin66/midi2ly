@@ -23,9 +23,15 @@ The bad thing is:
     * If you print the long track, those repeat signs are disturbing
     * You cannot listen to the song with the repeats set.
     * Hell of manual work
+    * And now imagine you want to add lyrics somehow....
 
-So I have looked around for a solution. For typesetting lilypond is great, so I "just" need to convert it to lilypond format. There is a nice tool musicxml2ly and Logic Pro X can export MusicXML format. So I have given it a try and it has failed miserable. After some time looking around and looking at the MusicXML format, I have come to the conclusion of this being a dead end. Next try has been with midi. The converter I have found from midi to lilypond haven't worked so well either and
-automatic repeats cannot be detected. As I have come across python-midi, I have decided to write my own converter. Here it is.
+So I have looked around for a solution. For music typesetting lilypond is great, so I "just" need to convert the Logic Pro music to lilypond format.
+There is a nice tool musicxml2ly and Logic Pro X can export MusicXML format. So I have given it a try and it has failed miserably.
+After some time looking around and looking at the MusicXML format, I have come to the conclusion of this being a dead end.
+Next try has been with midi. The converter - I have found for midi to lilypond - haven't worked so well either.
+Not to mention automatic repeats detection. As I have come across python-midi and I like python programming, I have decided to write my own converter.
+
+Here it is.
 
 Usage:
 ------
