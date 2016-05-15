@@ -138,6 +138,7 @@ for mt in MidiTrack.tracklist:
     if mt.output:
         mode = ''
         key = mt.key
+        fmt = None
         if mt.output_drums:
             drum_voices.append(key)
             bars = mt.bar_lily_notes
@@ -154,11 +155,12 @@ for mt in MidiTrack.tracklist:
             song_voices.append(key)
             bars = mt.bar_lily_notes
             fmt = 'fmt_voice'
-        print(key,'= ' + mode + '{')
-        for deco,bar in zip(bar_deco,bars):
-            deco['bar'] = bar
-            print(deco[fmt] % deco)
-        print('}')
+        if fmt is not None:
+            print(key,'= ' + mode + '{')
+            for deco,bar in zip(bar_deco,bars):
+                deco['bar'] = bar
+                print(deco[fmt] % deco)
+            print('}')
 for mt in MidiTrack.tracklist:
     if mt.output:
         if mt.output_lyrics:
