@@ -2,11 +2,12 @@ MIDI2LY
 -------
 
 A MIDI to Lilypond converter with these features:
-* Let's you select tracks and lyrics to be embedded
-* Automatic key detection
-* Automatic detection of repeats based on identical (!) bars
-* Repeats will fold lyrics along the bar
-* Notes are adjusted (rounded) to 1/64 boundaries
+
+    - Let's you select tracks and lyrics to be embedded
+    - Automatic key detection
+    - Automatic detection of repeats based on identical (!) bars
+    - Repeats will fold lyrics along the bar
+    - Notes are adjusted (rounded) to 1/64 boundaries
 
 Background:
 -----------
