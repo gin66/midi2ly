@@ -4,6 +4,7 @@ MIDI2LY
 A MIDI to Lilypond converter with these features:
 
     - Let's you select tracks and lyrics to be embedded
+    - Automatic selection of piano tracks to bass/treble (no left/right split though)
     - Automatic key detection
     - Automatic detection of repeats based on identical (!) bars
     - Repeats will fold lyrics along the bar
