@@ -1,6 +1,5 @@
 WISHLIST:
 * Scan midi stream for pitch setting/changes
 * Identify instruments from midi: especially drum and piano
-* Lyrics
 * Support more drum elements like tom, ride, ...
 * Adjust fill_bars to different time signature than 4/4
