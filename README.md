@@ -39,6 +39,14 @@ Please try for the latest usage:
 
     ./midi2ly.py -h
 
+In case you have Logic Pro X, then follow these steps:
+
+    1. Duplicate those tracks you want to export (assume you have used Alias+Loops)
+    2. Copy whole content of the original tracks
+    3. Select the new tracks and press 'J' in order to convert Alias+Loops into one region per track
+    4. Export as MIDI with Alt+Apple+E
+    5. Run midi2ly.py and lilypond => Done
+
 Example:
 --------
 
