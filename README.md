@@ -62,11 +62,16 @@ And then for type setting + midi output with repeats expanded just do:
 
     lilypond RN.ly
 
+This will create:
+
+    RN.pdf      ... the scores
+    RN-1.mid    ... with repeats unfolded
+
 In case you lack python v3. Then you can create a docker container with:
 
     docker build -t pymidi .
 
-And then run it with
+And run it with
 
     docker run -it --rm -v "`pwd`":/in pymidi -L 2 -P 3,4 Randy\ Newman\ -\ When\ I\ am\ Gone.mid >RN.ly
 
