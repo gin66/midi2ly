@@ -3,3 +3,6 @@ WISHLIST:
 * Identify instruments from midi: especially drum and piano
 * Support more drum elements like tom, ride, ...
 * Adjust fill_bars to different time signature than 4/4
+* Reorganize the timing in select_duration to better match the bars
+* Recognize and set triplets. That's difficult though
+* In some constellations (like unproperly placed 16th) following notes can get lost
