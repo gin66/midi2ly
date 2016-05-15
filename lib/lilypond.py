@@ -1,6 +1,6 @@
 
 NOTE = []
-for x in [",,,,",",,,",",,",",","","'","''","'''"]:
+for x in [",,,,",",,,",",,",",","","'","''","'''","''''"]:
     for c in ['c','cis','d','dis','e','f','fis','g','gis','a','ais','b']:
         NOTE.append(c+x)
 
@@ -52,9 +52,9 @@ def select_duration(tick,nextbar,dt,fulltick):
     if dt < 0:
         print('negative dt',dt)
         raise
-    v32 = int(round(16.0*dt/fulltick))*2
+    v32 = int(round(32.0*dt/fulltick))
     if v32 == 0:
-        v32 = 2
+        v32 = 1
     res = DURATIONS[v32],fulltick//32 * v32
     print('%% select_duration(',tick,',',nextbar,',',dt,',',fulltick,')=',res)
     return res

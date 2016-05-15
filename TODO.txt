@@ -5,5 +5,6 @@ WISHLIST:
 * Adjust fill_bars to different time signature than 4/4
 * Reorganize the timing in select_duration to better match the bars
 * Recognize and set triplets. That's difficult though
-* In some constellations (like unproperly placed 16th) following notes can get lost
 * Automatic left/right hand split (aka bass/treble selection) for piano
+* For DRUMS: Merge multiple pauses (or hide duplicate ones), because lilypond is currently complaining
+

@@ -88,6 +88,7 @@ for mt in MidiTrack.tracklist:
         mt.output        = True
         mt.output_lyrics = True
     mt.trim_notes()
+    mt.trim_lyrics()
     mt.split_same_time_notes_to_same_length()
 
 MidiTrack.fill_bars()
@@ -139,7 +140,7 @@ lyric_voices  = []
 for mt in MidiTrack.tracklist:
     if mt.output:
         mode = ''
-        key = mt.key
+        key = 'Track%c' % (64+mt.index)
         fmt = None
         if mt.output_drums:
             drum_voices.append(key)
@@ -193,23 +194,23 @@ if len(lpiano_voices) > 0 or len(rpiano_voices) > 0:
     pianostaff  = '\\new PianoStaff << \\context Staff = "1" << '
     pianostaff += '\\set PianoStaff.instrumentName = #"Piano"'
     for v,x in zip(rpiano_voices,['One','Two','Three','Four']):
-        pianostaff += '\\context Voice = "RPiano%s" { \\voice%s \\clef "treble" \\%s}' % (x,x,v)
+        pianostaff += '\\context Voice = "RPiano%s" { \\voice%s \\clef "treble" \\%s }' % (x,x,v)
     pianostaff += '>> \\context Staff = "2" <<'
     for v,x in zip(lpiano_voices,['One','Two','Three','Four']):
-        pianostaff += '\\context Voice = "LPiano%s" { \\voice%s \\clef "bass" \\%s}' % (x,x,v)
-    pianostaff += '>> >>'
+        pianostaff += '\\context Voice = "LPiano%s" { \\voice%s \\clef "bass" \\%s }' % (x,x,v)
+    pianostaff += ' >> >>'
 
 if len(drum_voices) > 0:
     drumstaff  = '\\new DrumStaff <<'
     for v,x in zip(drum_voices,['One','Two','Three','Four']):
-        drumstaff += '\\new DrumVoice {\\voice%s \\clef "percussion" \\%s}' % (x,v)
-    drumstaff += '>>'
+        drumstaff += '\\new DrumVoice {\\voice%s \\clef "percussion" \\%s }' % (x,v)
+    drumstaff += ' >>'
 
 if len(song_voices) > 0:
     songstaff  = '\\new Staff <<'
     for v,x in zip(song_voices,['One','Two','Three','Four']):
-        songstaff += '\\new Voice {\\voice%s \\clef "treble" \\%s}' % (x,v)
-    songstaff += '>>'
+        songstaff += '\\new Voice {\\voice%s \\clef "treble" \\%s }' % (x,v)
+    songstaff += ' >>'
 
 if len(lyric_voices) > 0:
     for v in lyric_voices:

@@ -2,7 +2,11 @@ import python_midi   as midi
 import lib.lilypond  as lilypond
 
 class MidiNote(object):
+    count = 0
+
     def __init__(self,track,pitch,velocity,at_tick,duration,extended=False):
+        MidiNote.count += 1
+        self.index    = MidiNote.count
         self.note     = midi.constants.NOTE_VALUE_MAP_FLAT[pitch]
         self.track    = track
         self.pitch    = pitch
@@ -12,21 +16,26 @@ class MidiNote(object):
         self.extended = extended      # is True, if has following note
 
     def __str__(self):
-        return 'Note(%s:%d,%d,%d ticks) in %s at %d' \
-                % (self.note,self.pitch,self.velocity,\
-                   self.duration,self.track,self.at_tick)
+        return 'Note(%d %s:%d,%d,%d ticks,%s) in %r at %d' \
+                % (self.index,self.note,self.pitch,self.velocity,\
+                   self.duration, '~' if self.extended else '|', \
+                   self.track,self.at_tick)
 
     __repr__ = __str__
 
 class MidiLyric(object):
+    count = 0
+
     def __init__(self,track,text,at_tick):
+        MidiLyric.count += 1
+        self.index    = MidiLyric.count
         self.track    = track
-        self.text     = text
+        self.text     = text.replace('\r',' ').replace('\n',' ')
         self.at_tick  = at_tick
 
     def __str__(self):
-        return 'Lyric(%s) in %s at %d' \
-                % (self.text,self.track,self.at_tick)
+        return 'Lyric(%d %s) in %r at %d' \
+                % (self.index,self.text,self.track,self.at_tick)
 
     __repr__ = __str__
 
@@ -136,7 +145,7 @@ class MidiTrack(object):
                     break
                 if ok:
                     reduced += (delta-skip)*repeat
-                    used.append( (c,delta,skip,repeat,'volta') )
+                    used.append( (c,delta,skip,repeat,'volta' if delta > 2 else 'percent') )
 
             # Then check for percent repeats, which can be nested in volta
             for f in feasible[i:]:
@@ -185,7 +194,7 @@ class MidiTrack(object):
 
         for f in repeats:
             c,delta,skip,repeat,typ = f
-            if delta >= 2:
+            if typ == 'volta':
                 last_bar = min(c[0]+(1+repeat)*delta,max_bar)-1
 
                 s = '%% %s -> %d repeats of %d bars' % (str(c),repeat+1,delta)
@@ -229,7 +238,7 @@ class MidiTrack(object):
                 if skip > 0:
                     bar_deco[min(c[0]+(repeat+1)*delta-1,last_bar)]['post'] = '}} |'
 
-            elif skip == 0 and delta == 1 and repeat >= 1:
+            else:
                 deco = bar_deco[c[0]]
                 print('%%',c,"-> simple repeat")
                 deco['info']     = 'simple'
@@ -342,15 +351,15 @@ class MidiTrack(object):
                     or type(e) is midi.events.NoteOffEvent:
                 if e.pitch not in transient:
                     print('%% NoteOff without NoteOn: ',e)
-                    raise
-                se = transient[e.pitch].pop(0)
-                if len(transient[e.pitch]) == 0:
-                    del transient[e.pitch]
+                else:
+                    se = transient[e.pitch].pop(0)
+                    if len(transient[e.pitch]) == 0:
+                        del transient[e.pitch]
 
-                note = MidiNote(self,se.pitch,se.velocity,se.tick,e.tick-se.tick)
-                self.notes.append(note)
-                if verbose:
-                    print('%% => ',note)
+                    note = MidiNote(self,se.pitch,se.velocity,se.tick,e.tick-se.tick)
+                    self.notes.append(note)
+                    if verbose:
+                        print('%% => ',note)
         if len(transient) > 0:
             raise Exception('MIDI-File damaged: Stuck Notes detected')
 
@@ -361,9 +370,28 @@ class MidiTrack(object):
         s_treble = sum(self.notecount_128[60:])
         return s_bass < s_treble
 
+    def trim_lyrics(self):
+        # Trim lyrics to 1/32 note (1/64 cannot be handled by latter processing)
+        # If needed concatenate lyrics
+        res = MidiTrack.resolution // 8
+        ly = sorted(self.lyrics,key=lambda l:l.at_tick)
+        for l in ly:
+            l.at_tick = ((l.at_tick+res//2)//res)*res
+
+        i = 1
+        while i < len(ly):
+            l1 = ly[i-1]
+            l2 = ly[i]
+            if l1.at_tick == l2.at_tick:
+                l1.text += ' ' + l2.text
+                ly.pop(i)
+            else:
+                i += 1
+        self.lyrics = ly
+
     def trim_notes(self):
-        # Trim notes on 1/64 note
-        res = MidiTrack.resolution // 16
+        # Trim notes on 1/32 note (1/64 cannot be handled by latter processing)
+        res = MidiTrack.resolution // 8
         for n in self.notes:
             dt = ((n.at_tick+res//2)//res)*res - n.at_tick
             if dt != 0:
@@ -374,32 +402,27 @@ class MidiTrack(object):
             if dt != 0:
                 print('%% trim note %s by %d ticks (res=%d)' % (n,dt,res))
                 n.duration += dt
+            if n.duration == 0:
+                n.duration = res
 
     def split_same_time_notes_to_same_length(self):
         active   = []
         newnotes = []
-        for n in self.notes:
-            active.append(n)
-            newnotes.append(n)
-            active = [nx for nx in active if nx.at_tick+nx.duration > n.at_tick]
-            to_cut = [nx for nx in active if nx.at_tick <  n.at_tick]
-            for nx in to_cut:
-                dt = n.at_tick-nx.at_tick-1
-                print('%% split %s after %d ticks' % (nx,dt))
-                np = MidiNote(nx.track,nx.pitch,nx.velocity,nx.at_tick,dt,True)
-                newnotes.append(np)
-                nx.duration -= dt
-                nx.at_tick   = n.at_tick
-
-        while len(active) > 0:
-            dt = min(n.duration for n in active)
-            active = [n for n in active if n.duration > dt]
-            for n in active:
-                np = MidiNote(n.track,n.pitch,n.velocity,n.at_tick,dt,True)
-                newnotes.append(np)
-                n.duration -= dt
-                n.at_tick  += dt
-                print('%% split last %s after %d ticks' % (n,dt))
+        notes = self.notes
+        while len(notes) > 0:
+            tick      = min(n.at_tick for n in notes)
+            same_time = [n for n in notes if n.at_tick == tick]
+            dt        = min(n.duration for n in same_time)
+            for n in same_time:
+                if n.duration == dt:
+                    newnotes.append(n)
+                    notes.remove(n)
+                else:
+                    np = MidiNote(n.track,n.pitch,n.velocity,n.at_tick,dt,True)
+                    print('%% split %s after %d ticks: %s' % (n,dt,np))
+                    newnotes.append(np)
+                    n.duration -= dt
+                    n.at_tick += dt
 
         self.notes = sorted(newnotes,key=lambda n:n.at_tick)
 
@@ -412,8 +435,8 @@ class MidiTrack(object):
                 if bs <= n.at_tick and be > n.at_tick:
                     if n.at_tick+n.duration-1 > be:
                         dt = n.at_tick + n.duration - (be + 1)
-                        print('%% split note %s by %d ticks at bar %d-%d ticks' % (n,dt,bs,be))
                         np = MidiNote(n.track,n.pitch,n.velocity,be+1,dt,False)
+                        print('%% split note %s by %d ticks at bar %d-%d ticks: %s' % (n,dt,bs,be,np))
                         self.notes.append(np)
                         n.duration -= dt
                         n.extended = True
@@ -428,11 +451,12 @@ class MidiTrack(object):
 
         repeats = MidiTrack.repeats
         for c,delta,skip,repeat,typ in repeats:
-            bars = []
-            for i in range(delta-skip):
-                bx = words[c[0]+i]
-                for r in range(1,repeat+1):
-                    bx += words[c[0]+i+r*delta]
+            if typ == 'volta':
+                bars = []
+                for i in range(delta-skip):
+                    bx = words[c[0]+i]
+                    for r in range(1,repeat+1):
+                        bx += words[c[0]+i+r*delta]
         n = max(len(bx) for bx in words)
 
         wnew = []
@@ -536,10 +560,17 @@ class MidiTrack(object):
         return ' '.join(l)
 
     def __str__(self):
-        s = 'Track(%s,%s)' % (self.trackname,self.instrument)
+        s  = 'Track(%s,%s)' % (self.trackname,self.instrument)
+        sx = []
+        if len(self.notes) > 0:
+            sx.append('%d notes' % len(self.notes))
         if len(self.lyrics) > 0:
-            s += ' with %d lyric events' % len(self.lyrics)
+            sx.append('%d lyric events' % len(self.lyrics))
+        sx = ' and '.join(sx)
+        if len(sx) > 0:
+            s += ' with ' + sx
         return s
 
-    __repr__ = __str__
+    def __repr__(self):
+        return 'Track(%s,%s)' % (self.trackname,self.instrument)
 
