@@ -416,10 +416,35 @@ class MidiTrack(object):
                     break
         self.notes = sorted(newnotes,key=lambda n:n.at_tick)
 
+    def collect_lyrics_for_repeats(self):
+        if not self.output_lyrics:
+            return
+
+        words = [[bar] for bar in self.bar_lily_words[0] ]
+
+        repeats = MidiTrack.repeats
+        for c,delta,skip,repeat,typ in repeats:
+            bars = []
+            for i in range(delta-skip):
+                bx = words[c[0]+i]
+                for r in range(1,repeat+1):
+                    bx += words[c[0]+i+r*delta]
+        n = max(len(bx) for bx in words)
+
+        wnew = []
+        for i in range(n):
+            wx = []
+            wnew.append(wx)
+            for bx in words:
+                wx.append('" "1' if i >= len(bx) else bx[i])
+
+        self.bar_lily_words = wnew
+
     def convert_lyrics_to_bars_as_lilypond(self):
         if not self.output_lyrics:
             return
 
+        lyric_bars = []
         for bs,be in MidiTrack.bars:
             bar  = [l for l in self.lyrics if bs <= l.at_tick and be > l.at_tick]
             bar  = sorted(bar,key=lambda l:l.at_tick)
@@ -443,8 +468,9 @@ class MidiTrack(object):
             for d in dur[1:]:
                 lilybar.append('" "%s' % d)
             lilybar = ' '.join(lilybar)
-            self.bar_lily_words.append(lilybar)
+            lyric_bars.append(lilybar)
             print('%% -> ',lilybar)
+        self.bar_lily_words.append(lyric_bars)
 
     def convert_notes_to_bars_as_lilypond(self):
         if not self.output:

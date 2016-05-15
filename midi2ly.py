@@ -107,6 +107,8 @@ for mt in MidiTrack.tracklist:
 
 if not args.no_repeat:
     MidiTrack.identify_repeats()
+    for mt in MidiTrack.tracklist:
+        mt.collect_lyrics_for_repeats()
 
 bar_deco = MidiTrack.get_bar_decorators_with_repeat(key_list)
 
@@ -165,17 +167,16 @@ for mt in MidiTrack.tracklist:
     if mt.output:
         if mt.output_lyrics:
             mode = ''
-            key = mt.key
-            key += '_Lyric'
-            lyric_voices.append(key)
-            bars = mt.bar_lily_words
-            mode = '\\lyricmode'
-            fmt = 'fmt_lyric'
-            print(key,'= ' + mode + '{')
-            for deco,bar in zip(bar_deco,bars):
-                deco['bar'] = bar
-                print(deco[fmt] % deco)
-            print('}')
+            for bars,cnt in zip(mt.bar_lily_words,'ABCDEFGHIJKLM'):
+                key = mt.key + '_Lyric_' + cnt
+                lyric_voices.append(key)
+                mode = '\\lyricmode'
+                fmt = 'fmt_lyric'
+                print(key,'= ' + mode + '{')
+                for deco,bar in zip(bar_deco,bars):
+                    deco['bar'] = bar
+                    print(deco[fmt] % deco)
+                print('}')
 
 print('%% Piano links =',lpiano_voices)
 print('%% Piano rechts=',rpiano_voices)
@@ -211,7 +212,8 @@ if len(song_voices) > 0:
     songstaff += '>>'
 
 if len(lyric_voices) > 0:
-    lyricstaff = '\\new Lyrics \\' + lyric_voices.pop(0)
+    for v in lyric_voices:
+        lyricstaff += '\\new Lyrics \\' + v
 
 print("""
 % The score definition
