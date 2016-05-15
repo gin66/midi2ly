@@ -16,6 +16,8 @@ class MidiNote(object):
                 % (self.note,self.pitch,self.velocity,\
                    self.duration,self.track,self.at_tick)
 
+    __repr__ = __str__
+
 class MidiLyric(object):
     def __init__(self,track,text,at_tick):
         self.track    = track
@@ -26,6 +28,8 @@ class MidiLyric(object):
         return 'Lyric(%s) in %s at %d' \
                 % (self.text,self.track,self.at_tick)
 
+    __repr__ = __str__
+
 class MidiTrack(object):
     tracklist      = []
     tracks         = {}
@@ -34,6 +38,7 @@ class MidiTrack(object):
     bars           = []     # List of tuples (start tick,end tick)
     resolution     = None   # Ticks per quarter note
     time_signature = {}
+    repeats        = []     # Tuples: bar list, delta, skip, repeat, type
 
     @classmethod
     def fill_bars(cls): # for now assume 4/4
@@ -154,11 +159,11 @@ class MidiTrack(object):
         for f in best_used:
             print('%% Used repeat xxx:',best_red,f)
 
-        return best_used
+        cls.repeats = best_used
 
     @classmethod
     def get_bar_decorators_with_repeat(cls,key_list):
-        repeats = cls.identify_repeats()
+        repeats = cls.repeats
         max_bar = len(cls.bars)
 
         bar_deco = []
@@ -167,6 +172,7 @@ class MidiTrack(object):
                                'pre'      : '',
                                'fmt_voice': '%(bol)s %(key)s %(timesig)s %(pre)s %(bar)s %(post)s  %% %(info)s',
                                'fmt_drum' : '%(bol)s %(timesig)s %(pre)s %(bar)s %(post)s  %% %(info)s',
+                               'fmt_lyric': '%(bol)s %(pre)s %(bar)s %(post)s  %% %(info)s',
                                'post'     : ' |',
                                'key'      : '',
                                'timesig'  : '',
@@ -410,6 +416,36 @@ class MidiTrack(object):
                     break
         self.notes = sorted(newnotes,key=lambda n:n.at_tick)
 
+    def convert_lyrics_to_bars_as_lilypond(self):
+        if not self.output_lyrics:
+            return
+
+        for bs,be in MidiTrack.bars:
+            bar  = [l for l in self.lyrics if bs <= l.at_tick and be > l.at_tick]
+            bar  = sorted(bar,key=lambda l:l.at_tick)
+
+            tick    = bs
+            lilybar = []
+            last = ' '
+            for l in bar:
+                print('%% ',tick,l)
+                dt = l.at_tick - tick
+                if dt > 0:
+                    dur,dt = lilypond.select_duration(tick,be+1,dt,MidiTrack.resolution*4)
+                    lilybar.append('"%s"%s' % (last,dur[0]))
+                    for d in dur[1:]:
+                        lilybar.append('" "%s' % d)
+                last = l.text.replace('"','\\"')
+                tick += dt
+            dt = be+1-tick
+            dur,dt = lilypond.select_duration(tick,be+1,dt,MidiTrack.resolution*4)
+            lilybar.append('"%s"%s' % (last,dur[0]))
+            for d in dur[1:]:
+                lilybar.append('" "%s' % d)
+            lilybar = ' '.join(lilybar)
+            self.bar_lily_words.append(lilybar)
+            print('%% -> ',lilybar)
+
     def convert_notes_to_bars_as_lilypond(self):
         if not self.output:
             return
@@ -474,3 +510,6 @@ class MidiTrack(object):
         if len(self.lyrics) > 0:
             s += ' with %d lyric events' % len(self.lyrics)
         return s
+
+    __repr__ = __str__
+

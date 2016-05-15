@@ -34,6 +34,7 @@ parser.add_argument('-o', nargs=1, dest='file',     help='Output processing resu
 parser.add_argument('-t', nargs=1, dest='title',    help='Title of the song')
 parser.add_argument('-c', nargs=1, dest='composer', help='Composer of the song')
 parser.add_argument('-r', action='store_true', dest='comp_first', help='Composer and Title reversed in filename')
+parser.add_argument('-n', action='store_true', dest='no_repeat', help='Do not use repeats')
 parser.add_argument('-l', action='store_true', dest='list', help='List all tracks in midi-file')
 parser.add_argument('-v', action='store_true', dest='verbose', help='Include verbose information in output')
 parser.add_argument('-V', nargs=1, dest='voice_list', default=[],help='Select tracks as voice  for output e.g. -V 1,2,3 ')
@@ -102,6 +103,10 @@ print('%% KEYS: ',key_list)
 
 for mt in MidiTrack.tracklist:
     mt.convert_notes_to_bars_as_lilypond()
+    mt.convert_lyrics_to_bars_as_lilypond()
+
+if not args.no_repeat:
+    MidiTrack.identify_repeats()
 
 bar_deco = MidiTrack.get_bar_decorators_with_repeat(key_list)
 
@@ -128,24 +133,47 @@ lpiano_voices = []
 rpiano_voices = []
 drum_voices   = []
 song_voices   = []
+lyric_voices  = []
 for mt in MidiTrack.tracklist:
     if mt.output:
+        mode = ''
+        key = mt.key
         if mt.output_drums:
-            drum_voices.append(mt.key)
+            drum_voices.append(key)
+            bars = mt.bar_lily_notes
+            mode = '\\drummode'
+            fmt = 'fmt_drum'
         if mt.output_piano:
             if mt.advise_treble():
-                rpiano_voices.append(mt.key)
+                rpiano_voices.append(key)
             else:
-                lpiano_voices.append(mt.key)
+                lpiano_voices.append(key)
+            bars = mt.bar_lily_notes
+            fmt = 'fmt_voice'
         if mt.output_voice:
-            song_voices.append(mt.key)
-        mode = '\\drummode' if mt.output_drums else ''
-        print(mt.key,'= ' + mode + '{')
-        for deco,bar in zip(bar_deco,mt.bar_lily_notes):
+            song_voices.append(key)
+            bars = mt.bar_lily_notes
+            fmt = 'fmt_voice'
+        print(key,'= ' + mode + '{')
+        for deco,bar in zip(bar_deco,bars):
             deco['bar'] = bar
-            fmt = 'fmt_drum' if mt.output_drums else 'fmt_voice'
             print(deco[fmt] % deco)
         print('}')
+for mt in MidiTrack.tracklist:
+    if mt.output:
+        if mt.output_lyrics:
+            mode = ''
+            key = mt.key
+            key += '_Lyric'
+            lyric_voices.append(key)
+            bars = mt.bar_lily_words
+            mode = '\\lyricmode'
+            fmt = 'fmt_lyric'
+            print(key,'= ' + mode + '{')
+            for deco,bar in zip(bar_deco,bars):
+                deco['bar'] = bar
+                print(deco[fmt] % deco)
+            print('}')
 
 print('%% Piano links =',lpiano_voices)
 print('%% Piano rechts=',rpiano_voices)
@@ -179,6 +207,8 @@ if len(song_voices) > 0:
         songstaff += '\\new Voice {\\voice%s \\clef "treble" \\%s}' % (x,v)
     songstaff += '>>'
 
+if len(lyric_voices) > 0:
+    lyricstaff = '\\new Lyrics \\' + lyric_voices.pop(0)
 
 print("""
 % The score definition
@@ -190,6 +220,7 @@ print("""
 #for v,x in zip(song_voices,['One','Two','Three','Four']):
 #    print('\\new Voice = "melody%s" { \\voice%s \\clef "bass" \\key %s %s \\%s}' % (x,x,key,time_sig,v))
 print(songstaff)
+print(lyricstaff)
 print(pianostaff)
 print(drumstaff)
 print("""
