@@ -183,6 +183,7 @@ print('%% Song=' ,song_voices)
 pianostaff = ''
 drumstaff  = ''
 songstaff  = ''
+lyricstaff = ''
 
 key = '\\key c \\major'
 if len(lpiano_voices) > 0 or len(rpiano_voices) > 0:
