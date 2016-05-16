@@ -363,7 +363,10 @@ class MidiTrack(object):
         if len(transient) > 0:
             raise Exception('MIDI-File damaged: Stuck Notes detected')
 
-        self.notes = sorted(self.notes,key=lambda n:n.at_tick)
+        self.notes = sort_notes(self.notes)
+
+    def sort_notes(self,notes):
+        return sorted(notes,key=lambda n:n.at_tick+n.pitch/1000)
 
     def advise_treble(self): # useful for piano to select bass or treble
         s_bass   = sum(self.notecount_128[:60])
@@ -424,7 +427,7 @@ class MidiTrack(object):
                     n.duration -= dt
                     n.at_tick += dt
 
-        self.notes = sorted(newnotes,key=lambda n:n.at_tick)
+        self.notes = sort_notes(newnotes)
 
     def split_notes_at_bar(self):
         newnotes = []
@@ -441,7 +444,7 @@ class MidiTrack(object):
                         n.duration -= dt
                         n.extended = True
                     break
-        self.notes = sorted(newnotes,key=lambda n:n.at_tick)
+        self.notes = sort_notes(newnotes)
 
     def collect_lyrics_for_repeats(self):
         if not self.output_lyrics:
@@ -474,8 +477,8 @@ class MidiTrack(object):
 
         lyric_bars = []
         for bs,be in MidiTrack.bars:
-            bar  = [l for l in self.lyrics if bs <= l.at_tick and be > l.at_tick]
-            bar  = sorted(bar,key=lambda l:l.at_tick)
+            bar = [l for l in self.lyrics if bs <= l.at_tick and be > l.at_tick]
+            bar = sorted(bar,key=lambda l:l.at_tick)
 
             tick    = bs
             lilybar = []
