@@ -363,7 +363,7 @@ class MidiTrack(object):
         if len(transient) > 0:
             raise Exception('MIDI-File damaged: Stuck Notes detected')
 
-        self.notes = sort_notes(self.notes)
+        self.notes = self.sort_notes(self.notes)
 
     def sort_notes(self,notes):
         return sorted(notes,key=lambda n:n.at_tick+n.pitch/1000)
@@ -427,7 +427,7 @@ class MidiTrack(object):
                     n.duration -= dt
                     n.at_tick += dt
 
-        self.notes = sort_notes(newnotes)
+        self.notes = self.sort_notes(newnotes)
 
     def split_notes_at_bar(self):
         newnotes = []
@@ -444,7 +444,7 @@ class MidiTrack(object):
                         n.duration -= dt
                         n.extended = True
                     break
-        self.notes = sort_notes(newnotes)
+        self.notes = self.sort_notes(newnotes)
 
     def collect_lyrics_for_repeats(self):
         if not self.output_lyrics:

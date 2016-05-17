@@ -7,4 +7,5 @@ WISHLIST:
 * Recognize and set triplets. That's difficult though
 * Automatic left/right hand split (aka bass/treble selection) for piano
 * For DRUMS: Merge multiple pauses (or hide duplicate ones), because lilypond is currently complaining
-
+    => Reason is, that my drums are split in several tracks and then combined to one staff.
+       If the tracks are combined on notes level before, the pauses will be better.
