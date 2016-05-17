@@ -75,11 +75,18 @@ This will create:
     RN.pdf      ... the scores
     RN-1.mid    ... with repeats unfolded
 
-In case you lack python v3. Then you can create a docker container with:
+Docker:
+-------
 
-    docker build -t pymidi .
+In case you lack python v3, then you can use a docker container. Either use the official one:
+
+    docker pull gin66/midi2ly
+
+Or create it locally with:
+
+    docker build -t midi2ly .
 
 And run it with
 
-    docker run -it --rm -v "`pwd`":/in pymidi -L 2 -P 3,4 Randy\ Newman\ -\ When\ I\ am\ Gone.mid >RN.ly
+    docker run -it --rm -v "`pwd`":/in midi2ly -L 2 -P 3,4 Randy\ Newman\ -\ When\ I\ am\ Gone.mid >RN.ly
 
