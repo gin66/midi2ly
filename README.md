@@ -8,7 +8,7 @@ A MIDI to Lilypond converter with these features:
     - Automatic key detection
     - Automatic detection of repeats based on identical (!) bars
     - Repeats will fold lyrics along the bar
-    - Notes are adjusted (rounded) to 1/64 boundaries
+    - Notes are adjusted (rounded) to 1/32 boundaries
 
 Background:
 -----------
