@@ -560,7 +560,10 @@ class MidiTrack(object):
 
         if tick-be != 1:
             raise Exception('Internal Error %d != %d + 1' % (tick,be))
-        return ' '.join(l)
+        s = ' '.join(l)
+        # Patch to avoid tilde before rest
+        s = s.replace('~ r',' r')
+        return s
 
     def __str__(self):
         s  = 'Track(%s,%s)' % (self.trackname,self.instrument)
