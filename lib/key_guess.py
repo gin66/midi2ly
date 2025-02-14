@@ -75,8 +75,8 @@ def calculate_scales():
                     sharp += 1
         major = notes[ i   %12]
         minor = notes[(i+9)%12]
-        major = (major+'/'+major).split('/')[0] + ' \major'
-        minor = (minor+'/'+minor).split('/')[0] + ' \minor'
+        major = (major+'/'+major).split('/')[0] + ' \\major'
+        minor = (minor+'/'+minor).split('/')[0] + ' \\minor'
         ref[major] = curr + [minor,sharp-flat]
         curr.insert(0,curr.pop())   # Rotate one half-tone
 

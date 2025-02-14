@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3
 import sys
 sys.path.append('python_midi')
 import argparse
@@ -13,7 +13,7 @@ def get_title_composer_from(args):
     global composer
     title    = 'Unknown Title'
     composer = 'Unknown Composer'
-    finfo = re.sub('\.[mM][iI][dD][iI]?','',args.midifile)
+    finfo = re.sub('.[mM][iI][dD][iI]?','',args.midifile)
     if finfo != args.midifile:
         finfo = re.split(' *- *',finfo)
         if len(finfo) == 2:

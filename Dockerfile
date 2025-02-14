@@ -4,7 +4,7 @@
 # Midi-file shall not be a symbolic link.
 # Output is the ly file to stdout
 
-FROM python:3.5.1-slim
+FROM python:3.13.2-slim
 
 RUN mkdir -p /usr/src/app/lib
 RUN mkdir -p /usr/src/app/python_midi
